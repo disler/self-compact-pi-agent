@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Plan: Self-Compacting Pi Agent Extension</title>
+<style>
+:root{
+  --bg:#0a0a0c; --bg2:#121214; --panel:#151517; --text:#f7f7f2; --white:#ffffff; --muted:#a0a0a6;
+  --border:#27272a; --border2:#292929; --accent:#facc15; --accent2:#ffd83d; --ok:#8bd450; --err:#f26d6d; --warn:#f5a524;
+  --mono:"SF Mono","JetBrains Mono",Menlo,Consolas,monospace;
+  --sans:"Inter","Helvetica Neue",Arial,sans-serif;
+  --display:"Barlow Condensed","Oswald","Arial Narrow",Impact,sans-serif;
+}
+html{scroll-behavior:smooth;background:var(--bg)}
+body{margin:0;background:var(--bg);color:var(--muted);font-family:var(--sans);font-size:20px;line-height:1.55}
+main{max-width:1180px;margin:0 auto;padding:2.5rem 1.5rem 6rem}
+section,.phase{scroll-margin-top:1rem}
+h1,h2,h3,h4{color:var(--text);font-family:var(--display);text-transform:uppercase;letter-spacing:.03em;line-height:1.1;margin:0 0 .6em}
+h1{font-size:3.4rem;color:var(--white)}
+h2{font-size:2.3rem;margin-top:3rem;padding-top:1.2rem;border-top:1px solid var(--border);position:relative}
+h2::before{content:"";display:inline-block;width:.55em;height:.55em;background:var(--accent);margin-right:.45em;vertical-align:.05em}
+h3{font-size:1.6rem;margin-top:2rem}
+h4{font-size:1.2rem;margin-top:1.5rem;color:var(--accent2)}
+p{margin:0 0 1rem}
+a{color:var(--accent2);text-decoration:none}a:hover{text-decoration:underline}
+strong{color:var(--text)}
+code{font-family:var(--mono);font-size:.82em;background:var(--bg2);border:1px solid var(--border2);border-radius:4px;padding:.12em .42em;color:var(--text);white-space:pre-wrap;word-break:break-word}
+pre{background:var(--bg2);border:1px solid var(--border2);border-radius:6px;padding:1rem 1.2rem;overflow:auto;font-family:var(--mono);font-size:.8em;line-height:1.5;color:var(--text)}
+pre code{background:none;border:none;padding:0;white-space:pre;font-size:1em}
+.ic{display:inline-block;width:1.1em;height:1.1em;vertical-align:-0.18em;margin-right:.35em;flex:0 0 auto}
+.meta summary{cursor:pointer;color:var(--accent);font-family:var(--mono);font-size:.85rem;letter-spacing:.08em;text-transform:uppercase}
+.meta dl{display:grid;grid-template-columns:max-content 1fr;gap:.35rem 1.2rem;margin:.8rem 0 0;font-family:var(--mono);font-size:.8rem}
+.meta dt{color:var(--accent);text-transform:uppercase}.meta dd{margin:0;color:var(--text);word-break:break-all}
+figure{margin:1.6rem 0;text-align:center}
+figure img{max-width:100%;border:1px solid var(--border);border-radius:6px}
+figure svg{max-width:100%;height:auto;border:1px solid var(--border);border-radius:6px;background:var(--bg2)}
+figcaption{margin-top:.6rem;color:var(--muted);font-size:.85rem;font-family:var(--mono);letter-spacing:.03em}
+.toc{background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:1.2rem 1.6rem;margin:1.5rem 0}
+.toc h2{border:none;margin:0 0 .6rem;padding:0;font-size:1.4rem}.toc h2::before{display:none}
+.toc ol{margin:0;padding-left:1.4rem;line-height:1.7}.toc ol ol{padding-left:1.6rem}
+.tag{display:inline-block;font-family:var(--mono);font-size:.68rem;letter-spacing:.08em;text-transform:uppercase;padding:.1em .5em;border-radius:3px;margin-right:.35em;vertical-align:.15em;border:1px solid var(--border2)}
+.tag.existing{color:var(--muted)}.tag.new{color:var(--bg);background:var(--accent);border-color:var(--accent)}
+.ftree,.ftree ul{list-style:none;margin:0;padding-left:1.15rem;border-left:1px solid #292929}
+.ftree{padding-left:0;border-left:none}
+.ftree li{margin:.35rem 0}
+.ftree .dir>code{font-weight:600}
+table{width:100%;border-collapse:collapse;margin:1rem 0 1.5rem;font-size:.9em}
+th,td{border:1px solid var(--border);padding:.55rem .7rem;text-align:left;vertical-align:top}
+th{color:var(--text);background:var(--bg2);font-family:var(--display);text-transform:uppercase;letter-spacing:.05em;font-weight:600}
+td{color:var(--muted)}
+.phase{background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:1.4rem 1.8rem;margin:1.6rem 0}
+.phase h3{margin-top:0}
+.status{color:var(--accent);font-weight:700;background:var(--bg);border-color:var(--accent)}
+ul.checklist{list-style:none;padding-left:0;margin:.4rem 0 1rem}
+ul.checklist li{margin:.45rem 0;padding-left:.2rem}
+.loop{border:1px dashed var(--accent);border-radius:6px;padding:.8rem 1rem;color:var(--text);background:rgba(250,204,21,.05);margin-top:1rem}
+.callout{border-left:4px solid var(--accent);background:var(--bg2);padding:.8rem 1.1rem;margin:1rem 0;border-radius:0 6px 6px 0}
+.callout.danger{border-color:var(--err)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:1.2rem}
+@media(max-width:900px){.grid2{grid-template-columns:1fr}}
+kbd{font-family:var(--mono);font-size:.8em;border:1px solid var(--border2);border-bottom-width:2px;border-radius:4px;padding:.05em .4em;color:var(--text)}
+details.q{border:1px solid var(--border);border-radius:6px;padding:.6rem 1rem;margin:.6rem 0}
+details.q summary{cursor:pointer;color:var(--text)}
+.num{font-family:var(--display);font-size:2.6rem;color:var(--accent);line-height:1;margin-right:.4rem;vertical-align:-.1em}
+</style>
+</head>
+<body>
+
+<!-- ===== INLINE ICON SPRITE (self-contained; raises human scan-ability) ===== -->
+<svg xmlns="http://www.w3.org/2000/svg" width="0" height="0" style="position:absolute;width:0;height:0;overflow:hidden" aria-hidden="true">
+  <symbol id="ic-agent" viewBox="0 0 24 24">
+    <circle cx="12" cy="3" r="1.4" fill="#8B5CF6"/>
+    <path d="M12 4.4V7" stroke="#8B5CF6" stroke-width="1.8" stroke-linecap="round"/>
+    <rect x="4" y="7" width="16" height="12" rx="4" fill="none" stroke="#8B5CF6" stroke-width="1.8"/>
+    <circle cx="9.5" cy="13" r="1.6" fill="#8B5CF6"/>
+    <circle cx="14.5" cy="13" r="1.6" fill="#8B5CF6"/>
+  </symbol>
+  <symbol id="ic-dbtype" viewBox="0 0 24 24">
+    <!-- Brackets from ic-type, pushed outwards to make space -->
+    <path d="M7 4c-2 0-3 1-3 3v2c0 1-.8 2-2 2v2c1.2 0 2 1 2 2v2c0 2 1 3 3 3" fill="none" stroke="#8B5CF6" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M17 4c2 0 3 1 3 3v2c0 1 .8 2 2 2v2c-1.2 0-2 1-2 2v2c0 2-1 3-3 3" fill="none" stroke="#8B5CF6" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+    <!-- Database cylinder from ic-table, shrunk and centered in the middle -->
+    <ellipse cx="12" cy="8.5" rx="3.5" ry="1.5" fill="none" stroke="#2DD4BF" stroke-width="1.4"/>
+    <path d="M8.5 8.5v6.5c0 0.85 1.55 1.5 3.5 1.5s3.5-.65 3.5-1.5V8.5" fill="none" stroke="#2DD4BF" stroke-width="1.4"/>
+    <path d="M8.5 11.75c0 0.85 1.55 1.5 3.5 1.5s3.5-.65 3.5-1.5" fill="none" stroke="#2DD4BF" stroke-width="1.4"/>
+  </symbol>
+  <symbol id="ic-file" viewBox="0 0 24 24">
+    <path d="M6 2.5h7.5L19 8v12.5a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-17a1 1 0 0 1 1-1z" fill="#1E2638" stroke="#8A93A6" stroke-width="1.3"/>
+    <path d="M13.5 2.5V8H19" fill="none" stroke="#8A93A6" stroke-width="1.3" stroke-linejoin="round"/>
+  </symbol>
+  <symbol id="ic-http" viewBox="0 0 24 24">
+    <circle cx="12" cy="12" r="9" fill="none" stroke="#2DD4BF" stroke-width="1.7"/>
+    <ellipse cx="12" cy="12" rx="3.7" ry="9" fill="none" stroke="#2DD4BF" stroke-width="1.7"/>
+    <path d="M3.2 9.2h17.6M3.2 14.8h17.6" stroke="#2DD4BF" stroke-width="1.7" fill="none"/>
+  </symbol>
+  <symbol id="ic-javascript" viewBox="0 0 128 128">
+    <path fill="#F0DB4F" d="M1.408 1.408h125.184v125.185H1.408z"/>
+    <path fill="#323330" d="M116.347 96.736c-.917-5.711-4.641-10.508-15.672-14.981-3.832-1.761-8.104-3.022-9.377-5.926-.452-1.69-.512-2.642-.226-3.665.821-3.32 4.784-4.355 7.925-3.403 2.023.678 3.938 2.237 5.093 4.724 5.402-3.498 5.391-3.475 9.163-5.879-1.381-2.141-2.118-3.129-3.022-4.045-3.249-3.629-7.676-5.498-14.756-5.355l-3.688.477c-3.534.893-6.902 2.748-8.877 5.235-5.926 6.724-4.236 18.492 2.975 23.335 7.104 5.332 17.54 6.545 18.873 11.531 1.297 6.104-4.486 8.08-10.234 7.378-4.236-.881-6.592-3.034-9.139-6.949-4.688 2.713-4.688 2.713-9.508 5.485 1.143 2.499 2.344 3.63 4.26 5.795 9.068 9.198 31.76 8.746 35.83-5.176.165-.478 1.261-3.666.38-8.581zM69.462 58.943H57.753l-.048 30.272c0 6.438.333 12.34-.714 14.149-1.713 3.558-6.152 3.117-8.175 2.427-2.059-1.012-3.106-2.451-4.319-4.485-.333-.584-.583-1.036-.667-1.071l-9.52 5.83c1.583 3.249 3.915 6.069 6.902 7.901 4.462 2.678 10.459 3.499 16.731 2.059 4.082-1.189 7.604-3.652 9.448-7.401 2.666-4.915 2.094-10.864 2.07-17.444.06-10.735.001-21.468.001-32.237z"/>
+  </symbol>
+  <symbol id="ic-json" viewBox="0 0 24 24">
+    <rect width="24" height="24" rx="5" fill="#1E2638"/>
+    <text x="12" y="16.6" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="700" fill="#F5A623" text-anchor="middle">{ }</text>
+  </symbol>
+  <symbol id="ic-markdown" viewBox="0 0 24 24">
+    <path fill="#9AA4B2" d="M22.27 19.385H1.73A1.73 1.73 0 010 17.655V6.345a1.73 1.73 0 011.73-1.73h20.54A1.73 1.73 0 0124 6.345v11.308a1.73 1.73 0 01-1.73 1.731zM5.769 15.923v-4.5l2.308 2.885 2.307-2.885v4.5h2.308V8.078h-2.308l-2.307 2.885-2.308-2.885H3.46v7.847zM21.232 12h-2.309V8.077h-2.307V12h-2.308l3.461 4.039z"/>
+  </symbol>
+  <symbol id="ic-python" viewBox="0 0 128 128">
+    <linearGradient id="python-original-a" gradientUnits="userSpaceOnUse" x1="70.252" y1="1237.476" x2="170.659" y2="1151.089" gradientTransform="matrix(.563 0 0 -.568 -29.215 707.817)">
+    <stop offset="0" stop-color="#5a9fd4"/>
+    <stop offset="1" stop-color="#306998"/>
+    </linearGradient>
+    <linearGradient id="python-original-b" gradientUnits="userSpaceOnUse" x1="209.474" y1="1098.811" x2="173.62" y2="1149.537" gradientTransform="matrix(.563 0 0 -.568 -29.215 707.817)">
+    <stop offset="0" stop-color="#ffd43b"/>
+    <stop offset="1" stop-color="#ffe873"/>
+    </linearGradient>
+    <path fill="url(#python-original-a)" d="M63.391 1.988c-4.222.02-8.252.379-11.8 1.007-10.45 1.846-12.346 5.71-12.346 12.837v9.411h24.693v3.137H29.977c-7.176 0-13.46 4.313-15.426 12.521-2.268 9.405-2.368 15.275 0 25.096 1.755 7.311 5.947 12.519 13.124 12.519h8.491V67.234c0-8.151 7.051-15.34 15.426-15.34h24.665c6.866 0 12.346-5.654 12.346-12.548V15.833c0-6.693-5.646-11.72-12.346-12.837-4.244-.706-8.645-1.027-12.866-1.008zM50.037 9.557c2.55 0 4.634 2.117 4.634 4.721 0 2.593-2.083 4.69-4.634 4.69-2.56 0-4.633-2.097-4.633-4.69-.001-2.604 2.073-4.721 4.633-4.721z" transform="translate(0 10.26)"/>
+    <path fill="url(#python-original-b)" d="M91.682 28.38v10.966c0 8.5-7.208 15.655-15.426 15.655H51.591c-6.756 0-12.346 5.783-12.346 12.549v23.515c0 6.691 5.818 10.628 12.346 12.547 7.816 2.297 15.312 2.713 24.665 0 6.216-1.801 12.346-5.423 12.346-12.547v-9.412H63.938v-3.138h37.012c7.176 0 9.852-5.005 12.348-12.519 2.578-7.735 2.467-15.174 0-25.096-1.774-7.145-5.161-12.521-12.348-12.521h-9.268zM77.809 87.927c2.561 0 4.634 2.097 4.634 4.692 0 2.602-2.074 4.719-4.634 4.719-2.55 0-4.633-2.117-4.633-4.719 0-2.595 2.083-4.692 4.633-4.692z" transform="translate(0 10.26)"/>
+    <radialGradient id="python-original-c" cx="1825.678" cy="444.45" r="26.743" gradientTransform="matrix(0 -.24 -1.055 0 532.979 557.576)" gradientUnits="userSpaceOnUse">
+    <stop offset="0" stop-color="#B8B8B8" stop-opacity=".498"/>
+    <stop offset="1" stop-color="#7F7F7F" stop-opacity="0"/>
+    </radialGradient>
+    <path opacity=".444" fill="url(#python-original-c)" d="M97.309 119.597c0 3.543-14.816 6.416-33.091 6.416-18.276 0-33.092-2.873-33.092-6.416 0-3.544 14.815-6.417 33.092-6.417 18.275 0 33.091 2.872 33.091 6.417z"/>
+  </symbol>
+  <symbol id="ic-sql" viewBox="0 0 24 24">
+    <path fill="#336791" d="M23.5594 14.7228a.5269.5269 0 0 0-.0563-.1191c-.139-.2632-.4768-.3418-1.0074-.2321-1.6533.3411-2.2935.1312-2.5256-.0191 1.342-2.0482 2.445-4.522 3.0411-6.8297.2714-1.0507.7982-3.5237.1222-4.7316a1.5641 1.5641 0 0 0-.1509-.235C21.6931.9086 19.8007.0248 17.5099.0005c-1.4947-.0158-2.7705.3461-3.1161.4794a9.449 9.449 0 0 0-.5159-.0816 8.044 8.044 0 0 0-1.3114-.1278c-1.1822-.0184-2.2038.2642-3.0498.8406-.8573-.3211-4.7888-1.645-7.2219.0788C.9359 2.1526.3086 3.8733.4302 6.3043c.0409.818.5069 3.334 1.2423 5.7436.4598 1.5065.9387 2.7019 1.4334 3.582.553.9942 1.1259 1.5933 1.7143 1.7895.4474.1491 1.1327.1441 1.8581-.7279.8012-.9635 1.5903-1.8258 1.9446-2.2069.4351.2355.9064.3625 1.39.3772a.0569.0569 0 0 0 .0004.0041 11.0312 11.0312 0 0 0-.2472.3054c-.3389.4302-.4094.5197-1.5002.7443-.3102.064-1.1344.2339-1.1464.8115-.0025.1224.0329.2309.0919.3268.2269.4231.9216.6097 1.015.6331 1.3345.3335 2.5044.092 3.3714-.6787-.017 2.231.0775 4.4174.3454 5.0874.2212.5529.7618 1.9045 2.4692 1.9043.2505 0 .5263-.0291.8296-.0941 1.7819-.3821 2.5557-1.1696 2.855-2.9059.1503-.8707.4016-2.8753.5388-4.1012.0169-.0703.0357-.1207.057-.1362.0007-.0005.0697-.0471.4272.0307a.3673.3673 0 0 0 .0443.0068l.2539.0223.0149.001c.8468.0384 1.9114-.1426 2.5312-.4308.6438-.2988 1.8057-1.0323 1.5951-1.6698zM2.371 11.8765c-.7435-2.4358-1.1779-4.8851-1.2123-5.5719-.1086-2.1714.4171-3.6829 1.5623-4.4927 1.8367-1.2986 4.8398-.5408 6.108-.13-.0032.0032-.0066.0061-.0098.0094-2.0238 2.044-1.9758 5.536-1.9708 5.7495-.0002.0823.0066.1989.0162.3593.0348.5873.0996 1.6804-.0735 2.9184-.1609 1.1504.1937 2.2764.9728 3.0892.0806.0841.1648.1631.2518.2374-.3468.3714-1.1004 1.1926-1.9025 2.1576-.5677.6825-.9597.5517-1.0886.5087-.3919-.1307-.813-.5871-1.2381-1.3223-.4796-.839-.9635-2.0317-1.4155-3.5126zm6.0072 5.0871c-.1711-.0428-.3271-.1132-.4322-.1772.0889-.0394.2374-.0902.4833-.1409 1.2833-.2641 1.4815-.4506 1.9143-1.0002.0992-.126.2116-.2687.3673-.4426a.3549.3549 0 0 0 .0737-.1298c.1708-.1513.2724-.1099.4369-.0417.156.0646.3078.26.3695.4752.0291.1016.0619.2945-.0452.4444-.9043 1.2658-2.2216 1.2494-3.1676 1.0128zm2.094-3.988-.0525.141c-.133.3566-.2567.6881-.3334 1.003-.6674-.0021-1.3168-.2872-1.8105-.8024-.6279-.6551-.9131-1.5664-.7825-2.5004.1828-1.3079.1153-2.4468.079-3.0586-.005-.0857-.0095-.1607-.0122-.2199.2957-.2621 1.6659-.9962 2.6429-.7724.4459.1022.7176.4057.8305.928.5846 2.7038.0774 3.8307-.3302 4.7363-.084.1866-.1633.3629-.2311.5454zm7.3637 4.5725c-.0169.1768-.0358.376-.0618.5959l-.146.4383a.3547.3547 0 0 0-.0182.1077c-.0059.4747-.054.6489-.115.8693-.0634.2292-.1353.4891-.1794 1.0575-.11 1.4143-.8782 2.2267-2.4172 2.5565-1.5155.3251-1.7843-.4968-2.0212-1.2217a6.5824 6.5824 0 0 0-.0769-.2266c-.2154-.5858-.1911-1.4119-.1574-2.5551.0165-.5612-.0249-1.9013-.3302-2.6462.0044-.2932.0106-.5909.019-.8918a.3529.3529 0 0 0-.0153-.1126 1.4927 1.4927 0 0 0-.0439-.208c-.1226-.4283-.4213-.7866-.7797-.9351-.1424-.059-.4038-.1672-.7178-.0869.067-.276.1831-.5875.309-.9249l.0529-.142c.0595-.16.134-.3257.213-.5012.4265-.9476 1.0106-2.2453.3766-5.1772-.2374-1.0981-1.0304-1.6343-2.2324-1.5098-.7207.0746-1.3799.3654-1.7088.5321a5.6716 5.6716 0 0 0-.1958.1041c.0918-1.1064.4386-3.1741 1.7357-4.4823a4.0306 4.0306 0 0 1 .3033-.276.3532.3532 0 0 0 .1447-.0644c.7524-.5706 1.6945-.8506 2.802-.8325.4091.0067.8017.0339 1.1742.081 1.939.3544 3.2439 1.4468 4.0359 2.3827.8143.9623 1.2552 1.9315 1.4312 2.4543-1.3232-.1346-2.2234.1268-2.6797.779-.9926 1.4189.543 4.1729 1.2811 5.4964.1353.2426.2522.4522.2889.5413.2403.5825.5515.9713.7787 1.2552.0696.087.1372.1714.1885.245-.4008.1155-1.1208.3825-1.0552 1.717-.0123.1563-.0423.4469-.0834.8148-.0461.2077-.0702.4603-.0994.7662zm.8905-1.6211c-.0405-.8316.2691-.9185.5967-1.0105a2.8566 2.8566 0 0 0 .135-.0406 1.202 1.202 0 0 0 .1342.103c.5703.3765 1.5823.4213 3.0068.1344-.2016.1769-.5189.3994-.9533.6011-.4098.1903-1.0957.333-1.7473.3636-.7197.0336-1.0859-.0807-1.1721-.151zm.5695-9.2712c-.0059.3508-.0542.6692-.1054 1.0017-.055.3576-.112.7274-.1264 1.1762-.0142.4368.0404.8909.0932 1.3301.1066.887.216 1.8003-.2075 2.7014a3.5272 3.5272 0 0 1-.1876-.3856c-.0527-.1276-.1669-.3326-.3251-.6162-.6156-1.1041-2.0574-3.6896-1.3193-4.7446.3795-.5427 1.3408-.5661 2.1781-.463zm.2284 7.0137a12.3762 12.3762 0 0 0-.0853-.1074l-.0355-.0444c.7262-1.1995.5842-2.3862.4578-3.4385-.0519-.4318-.1009-.8396-.0885-1.2226.0129-.4061.0666-.7543.1185-1.0911.0639-.415.1288-.8443.1109-1.3505.0134-.0531.0188-.1158.0118-.1902-.0457-.4855-.5999-1.938-1.7294-3.253-.6076-.7073-1.4896-1.4972-2.6889-2.0395.5251-.1066 1.2328-.2035 2.0244-.1859 2.0515.0456 3.6746.8135 4.8242 2.2824a.908.908 0 0 1 .0667.1002c.7231 1.3556-.2762 6.2751-2.9867 10.5405zm-8.8166-6.1162c-.025.1794-.3089.4225-.6211.4225a.5821.5821 0 0 1-.0809-.0056c-.1873-.026-.3765-.144-.5059-.3156-.0458-.0605-.1203-.178-.1055-.2844.0055-.0401.0261-.0985.0925-.1488.1182-.0894.3518-.1226.6096-.0867.3163.0441.6426.1938.6113.4186zm7.9305-.4114c.0111.0792-.049.201-.1531.3102-.0683.0717-.212.1961-.4079.2232a.5456.5456 0 0 1-.075.0052c-.2935 0-.5414-.2344-.5607-.3717-.024-.1765.2641-.3106.5611-.352.297-.0414.6111.0088.6356.1851z"/>
+  </symbol>
+  <symbol id="ic-swift" viewBox="0 0 128 128">
+    <path fill="#f05138" d="M126.33 34.06a39.32 39.32 0 00-.79-7.83 28.78 28.78 0 00-2.65-7.58 28.84 28.84 0 00-4.76-6.32 23.42 23.42 0 00-6.62-4.55 27.27 27.27 0 00-7.68-2.53c-2.65-.51-5.56-.51-8.21-.76H30.25a45.46 45.46 0 00-6.09.51 21.82 21.82 0 00-5.82 1.52c-.53.25-1.32.51-1.85.76a33.82 33.82 0 00-5 3.28c-.53.51-1.06.76-1.59 1.26a22.41 22.41 0 00-4.76 6.32 23.61 23.61 0 00-2.65 7.58 78.5 78.5 0 00-.79 7.83v60.39a39.32 39.32 0 00.79 7.83 28.78 28.78 0 002.65 7.58 28.84 28.84 0 004.76 6.32 23.42 23.42 0 006.62 4.55 27.27 27.27 0 007.68 2.53c2.65.51 5.56.51 8.21.76h63.22a45.08 45.08 0 008.21-.76 27.27 27.27 0 007.68-2.53 30.13 30.13 0 006.62-4.55 22.41 22.41 0 004.76-6.32 23.61 23.61 0 002.65-7.58 78.49 78.49 0 00.79-7.83V34.06z"/>
+    <path fill="#fefefe" d="M85 96.5c-11.11 6.13-26.38 6.76-41.75.47A64.53 64.53 0 0113.84 73a50 50 0 0010.85 6.32c15.87 7.1 31.73 6.61 42.9 0-15.9-11.66-29.4-26.82-39.46-39.2a43.47 43.47 0 01-5.29-6.82c12.16 10.61 31.5 24 38.38 27.79a271.77 271.77 0 01-27-32.34 266.8 266.8 0 0044.47 34.87c.71.38 1.26.7 1.7 1a32.7 32.7 0 001.21-3.51c3.71-12.89-.53-27.54-9.79-39.67C93.25 33.81 106 57.05 100.66 76.51c-.14.53-.29 1-.45 1.55l.19.22c10.59 12.63 7.68 26 6.35 23.5C101 91 90.37 94.33 85 96.5z"/>
+  </symbol>
+  <symbol id="ic-table" viewBox="0 0 24 24">
+    <ellipse cx="12" cy="6" rx="7" ry="3" fill="none" stroke="#2DD4BF" stroke-width="1.8"/>
+    <path d="M5 6v12c0 1.7 3.1 3 7 3s7-1.3 7-3V6" fill="none" stroke="#2DD4BF" stroke-width="1.8"/>
+    <path d="M5 12c0 1.7 3.1 3 7 3s7-1.3 7-3" fill="none" stroke="#2DD4BF" stroke-width="1.8"/>
+  </symbol>
+  <symbol id="ic-type" viewBox="0 0 24 24">
+    <path d="M10 4c-2 0-3 1-3 3v2c0 1-.8 2-2 2v2c1.2 0 2 1 2 2v2c0 2 1 3 3 3" fill="none" stroke="#8B5CF6" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M14 4c2 0 3 1 3 3v2c0 1 .8 2 2 2v2c-1.2 0-2 1-2 2v2c0 2-1 3-3 3" fill="none" stroke="#8B5CF6" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+  </symbol>
+  <symbol id="ic-typescript" viewBox="0 0 128 128">
+    <path fill="#fff" d="M22.67 47h99.67v73.67H22.67z"/>
+    <path data-name="original" fill="#007acc" d="M1.5 63.91v62.5h125v-125H1.5zm100.73-5a15.56 15.56 0 017.82 4.5 20.58 20.58 0 013 4c0 .16-5.4 3.81-8.69 5.85-.12.08-.6-.44-1.13-1.23a7.09 7.09 0 00-5.87-3.53c-3.79-.26-6.23 1.73-6.21 5a4.58 4.58 0 00.54 2.34c.83 1.73 2.38 2.76 7.24 4.86 8.95 3.85 12.78 6.39 15.16 10 2.66 4 3.25 10.46 1.45 15.24-2 5.2-6.9 8.73-13.83 9.9a38.32 38.32 0 01-9.52-.1 23 23 0 01-12.72-6.63c-1.15-1.27-3.39-4.58-3.25-4.82a9.34 9.34 0 011.15-.73L82 101l3.59-2.08.75 1.11a16.78 16.78 0 004.74 4.54c4 2.1 9.46 1.81 12.16-.62a5.43 5.43 0 00.69-6.92c-1-1.39-3-2.56-8.59-5-6.45-2.78-9.23-4.5-11.77-7.24a16.48 16.48 0 01-3.43-6.25 25 25 0 01-.22-8c1.33-6.23 6-10.58 12.82-11.87a31.66 31.66 0 019.49.26zm-29.34 5.24v5.12H56.66v46.23H45.15V69.26H28.88v-5a49.19 49.19 0 01.12-5.17C29.08 59 39 59 51 59h21.83z"/>
+  </symbol>
+  <symbol id="ic-vue" viewBox="0 0 24 24">
+    <path d="M2 3.5h4.3L12 13.2 17.7 3.5H22L12 20.5z" fill="#41B883"/>
+    <path d="M6.3 3.5h3.2L12 7.7l2.5-4.2h3.2L12 13.2z" fill="#35495E"/>
+  </symbol>
+</svg>
+
+<main>
+
+  <!-- ===== HEADER + UPDATABLE METADATA ===== -->
+  <header>
+    <h1>Plan: Self-Compacting Pi Agent Extension</h1>
+    <details class="meta" open>
+      <summary>Metadata</summary>
+      <dl>
+        <dt>created</dt>      <dd>2026-09-15T15:38:31Z</dd>
+        <dt>modified</dt>     <dd>2026-09-15T15:38:31Z, 2026-09-15T16:13:26Z</dd>
+        <dt>commits</dt>      <dd>(none yet)</dd>
+        <dt>agent name</dt>   <dd><code><svg class="ic"><use href="#ic-agent"/></svg> claude-fable-5-1</code></dd>
+        <dt>session id</dt>   <dd>2392d222-072b-4150-a3f9-77d26b5e64bb</dd>
+        <dt>back refs</dt>    <dd><code><svg class="ic"><use href="#ic-markdown"/></svg> ../../prompts/end_draft_plan.md</code> (requirements), <code><svg class="ic"><use href="#ic-markdown"/></svg> ../../ai_docs/README.md</code> (Pi v0.85.1 doc bundle)</dd>
+        <dt>forward refs</dt> <dd><code><svg class="ic"><use href="#ic-markdown"/></svg> ../../apps/claude-fable-5-1/verification/REPORT.md</code> (verification results), <code><svg class="ic"><use href="#ic-markdown"/></svg> ../../apps/claude-fable-5-1/README.md</code> (usage)</dd>
+      </dl>
+    </details>
+  </header>
+
+  <figure>
+    <img src="self-compact-pi-extension/hero.png" alt="A 20-cell context gauge with three threshold markers above two terminals; a NOTE TO SELF card is handed from a full session to a fresh one.">
+    <figcaption>The agent watches its own context gauge, writes a note to self, compacts, and resumes from the note.</figcaption>
+  </figure>
+
+  <nav id="toc" class="toc">
+    <h2>Contents</h2>
+    <ol>
+      <li><a href="#purpose">Purpose</a></li>
+      <li><a href="#problem">Problem</a></li>
+      <li><a href="#solution">Solution</a></li>
+      <li><a href="#files">Relevant Files</a></li>
+      <li><a href="#database-models">Database Models</a></li>
+      <li><a href="#phases">Implementation Phases</a>
+        <ol>
+          <li><a href="#phase-summary">Phase Summary</a></li>
+          <li><a href="#phase-1">Phase 1: Scaffold and Threshold Engine</a></li>
+          <li><a href="#phase-2">Phase 2: Context Bar and Footer UI</a></li>
+          <li><a href="#phase-3">Phase 3: Prompt Engineering Files</a></li>
+          <li><a href="#phase-4">Phase 4: self_compact Tool and Handoff State Machine</a></li>
+          <li><a href="#phase-5">Phase 5: HIL Commands and Renderers</a></li>
+          <li><a href="#phase-6">Phase 6: Verification Harness and Artifacts</a></li>
+        </ol>
+      </li>
+      <li><a href="#validation">Validation Commands</a></li>
+      <li><a href="#notes">Notes</a></li>
+      <li><a href="#amendments">Amendments</a></li>
+    </ol>
+  </nav>
+
+  <!-- ===== PURPOSE / PROBLEM / SOLUTION ===== -->
+  <section id="purpose">
+    <h2>Purpose</h2>
+    <p>Build a standalone Pi (v0.85.1) coding-agent extension, <code><svg class="ic"><use href="#ic-typescript"/></svg> self-compact.ts</code>, that lets a long-running autonomous agent manage its own context window: it watches usage against three configurable thresholds (notice, warning, forced), nudges the agent with editable prompt files, locks every other tool once the hard limit is crossed, lets the agent hand itself off with <code>self_compact(note_to_self)</code>, replaces Pi's summary prompt, and returns the note verbatim after compaction so real work continues with no human in the loop. The extension ships with a 20-cell context bar, two human-in-the-loop slash commands, four CLI flags, and a verification harness that proves every Definition-of-Done bullet.</p>
+  </section>
+
+  <section id="problem">
+    <h2>Problem</h2>
+    <p>Out-loop agents run until their context is exhausted. As context grows, quality drops (context rot) and every turn re-sends hundreds of thousands of tokens to a frontier model. Pi already has compaction, but it is reactive: it fires at <code>contextWindow - reserveTokens</code> with a generic summary prompt, the agent gets no advance warning, and nothing preserves the agent's own "what I was about to do" intent across the summary boundary. The agent can neither see its usage nor act on it, and a summary written by a detached summarizer often restarts finished work.</p>
+    <figure>
+      <svg viewBox="0 0 1100 340" width="1100" height="340" xmlns="http://www.w3.org/2000/svg" font-family="Menlo, Consolas, monospace">
+        <rect width="1100" height="340" fill="#121214"/>
+        <!-- context growth curve -->
+        <polyline points="80,270 260,230 440,200 620,150 800,95 980,60" fill="none" stroke="#facc15" stroke-width="5" stroke-linecap="round"/>
+        <line x1="80" y1="290" x2="1020" y2="290" stroke="#27272a" stroke-width="2"/>
+        <line x1="80" y1="290" x2="80" y2="40" stroke="#27272a" stroke-width="2"/>
+        <text x="90" y="34" fill="#a0a0a6" font-size="18">context tokens</text>
+        <text x="900" y="322" fill="#a0a0a6" font-size="18">turns</text>
+        <!-- overflow wall -->
+        <rect x="960" y="40" width="60" height="250" fill="#f26d6d" opacity=".22"/>
+        <line x1="960" y1="40" x2="960" y2="290" stroke="#f26d6d" stroke-width="4"/>
+        <text x="980" y="170" fill="#f26d6d" font-size="20" transform="rotate(-90 980 170)" text-anchor="middle">overflow</text>
+        <!-- rot label -->
+        <text x="560" y="135" fill="#f7f7f2" font-size="22">quality drops, cost climbs</text>
+        <line x1="620" y1="150" x2="560" y2="140" stroke="#27272a" stroke-width="0"/>
+        <!-- no warning markers -->
+        <text x="300" y="300" fill="#a0a0a6" font-size="18" text-anchor="middle" dy="24">no notice</text>
+        <text x="620" y="300" fill="#a0a0a6" font-size="18" text-anchor="middle" dy="24">no warning</text>
+        <text x="820" y="300" fill="#a0a0a6" font-size="18" text-anchor="middle" dy="24">no handoff</text>
+      </svg>
+      <figcaption>Context grows every turn until the wall. Pi's default compaction is late, generic, and blind to the agent's intent.</figcaption>
+    </figure>
+  </section>
+
+  <section id="solution">
+    <h2>Solution</h2>
+    <p>One extension file plus four small helper modules. Thresholds are parsed from <code>--compact-soft-at</code>, <code>--compact-at</code>, and <code>--compact-buffer</code> (tokens, <code>k</code>/<code>m</code>, or <code>%</code>), resolved against the active model's window, and capped at 90%. On every <code>turn_end</code> the extension reads <code>ctx.getContextUsage()</code>, derives a level (idle → notice → warning → forced), and delivers the matching prompt file as a steering message. At forced level every tool except <code>self_compact</code> is blocked in <code>tool_call</code> and removed from the active tool list. The agent calls <code>self_compact({note_to_self})</code>; the note is validated, persisted as a custom session entry, and the run ends. When the agent settles, the extension calls <code>ctx.compact()</code>; its <code>session_before_compact</code> handler generates the summary itself with the override prompt (<code>--compact-prompt</code> &gt; <code>USER_PROMPT_COMPACTION_MESSAGE.md</code> &gt; built-in). On <code>session_compact</code> the tools are restored and the note is sent back verbatim as a custom message that triggers the next turn. Failure or cancellation keeps the note and the lock; retries and reload recovery rebuild state from the session entries. A custom footer renders the 20-cell bar and level, and <code>/self-compact-info</code> / <code>/self-compact-now</code> give a human the same controls.</p>
+    <figure>
+      <svg viewBox="0 0 1100 420" width="1100" height="420" xmlns="http://www.w3.org/2000/svg" font-family="Menlo, Consolas, monospace">
+        <rect width="1100" height="420" fill="#121214"/>
+        <!-- states -->
+        <g>
+          <rect x="40" y="60" width="180" height="70" rx="6" fill="#0a0a0c" stroke="#a0a0a6" stroke-width="2"/>
+          <text x="130" y="103" fill="#f7f7f2" font-size="20" text-anchor="middle">idle</text>
+          <rect x="280" y="60" width="180" height="70" rx="6" fill="#0a0a0c" stroke="#facc15" stroke-width="2"/>
+          <text x="370" y="103" fill="#facc15" font-size="20" text-anchor="middle">notice</text>
+          <rect x="520" y="60" width="180" height="70" rx="6" fill="#0a0a0c" stroke="#f5a524" stroke-width="2"/>
+          <text x="610" y="103" fill="#f5a524" font-size="20" text-anchor="middle">warning</text>
+          <rect x="760" y="60" width="180" height="70" rx="6" fill="#0a0a0c" stroke="#f26d6d" stroke-width="3"/>
+          <text x="850" y="103" fill="#f26d6d" font-size="20" text-anchor="middle">forced: lock</text>
+        </g>
+        <!-- arrows across top -->
+        <g stroke="#a0a0a6" stroke-width="2" fill="#a0a0a6">
+          <line x1="220" y1="95" x2="272" y2="95"/><polygon points="272,95 262,90 262,100"/>
+          <line x1="460" y1="95" x2="512" y2="95"/><polygon points="512,95 502,90 502,100"/>
+          <line x1="700" y1="95" x2="752" y2="95"/><polygon points="752,95 742,90 742,100"/>
+        </g>
+        <text x="246" y="150" fill="#a0a0a6" font-size="16" text-anchor="middle">soft</text>
+        <text x="486" y="150" fill="#a0a0a6" font-size="16" text-anchor="middle">warn</text>
+        <text x="726" y="150" fill="#a0a0a6" font-size="16" text-anchor="middle">warn+buffer</text>
+        <!-- handoff row -->
+        <rect x="40" y="250" width="220" height="70" rx="6" fill="#0a0a0c" stroke="#facc15" stroke-width="2"/>
+        <text x="150" y="293" fill="#f7f7f2" font-size="20" text-anchor="middle">self_compact(note)</text>
+        <rect x="330" y="250" width="200" height="70" rx="6" fill="#0a0a0c" stroke="#facc15" stroke-width="2"/>
+        <text x="430" y="293" fill="#f7f7f2" font-size="20" text-anchor="middle">compact on idle</text>
+        <rect x="600" y="250" width="200" height="70" rx="6" fill="#0a0a0c" stroke="#8bd450" stroke-width="2"/>
+        <text x="700" y="293" fill="#8bd450" font-size="20" text-anchor="middle">note returned</text>
+        <rect x="870" y="250" width="190" height="70" rx="6" fill="#0a0a0c" stroke="#a0a0a6" stroke-width="2"/>
+        <text x="965" y="293" fill="#f7f7f2" font-size="20" text-anchor="middle">continue</text>
+        <g stroke="#a0a0a6" stroke-width="2" fill="#a0a0a6">
+          <line x1="260" y1="285" x2="322" y2="285"/><polygon points="322,285 312,280 312,290"/>
+          <line x1="530" y1="285" x2="592" y2="285"/><polygon points="592,285 582,280 582,290"/>
+          <line x1="800" y1="285" x2="862" y2="285"/><polygon points="862,285 852,280 852,290"/>
+        </g>
+        <!-- down arrow from forced to self_compact -->
+        <g stroke="#f26d6d" stroke-width="2" fill="#f26d6d">
+          <path d="M850,130 L850,200 L150,200 L150,242" fill="none"/>
+          <polygon points="150,242 145,232 155,232"/>
+        </g>
+        <!-- failure loop -->
+        <g stroke="#f26d6d" stroke-width="2" fill="none">
+          <path d="M430,320 L430,370 L150,370 L150,320" stroke-dasharray="6 6"/>
+        </g>
+        <text x="290" y="395" fill="#f26d6d" font-size="16" text-anchor="middle">fail: keep note, keep lock, retry</text>
+      </svg>
+      <figcaption>Usage levels drive prompts and the lock; the handoff row runs only after the agent settles and only unlocks on success.</figcaption>
+    </figure>
+  </section>
+
+  <!-- ===== RELEVANT FILES ===== -->
+  <section id="files" class="files">
+    <h2>Relevant Files</h2>
+
+    <h3>Existing Files</h3>
+    <ul class="ftree">
+      <li class="dir"><code>/Users/indydevdan/Documents/projects/yt/self-compact/prompts/</code>
+        <ul>
+          <li><span class="tag existing">existing</span> <code><svg class="ic"><use href="#ic-markdown"/></svg> end_draft_plan.md</code> — requirements, variables, and the Definition of Done this plan is graded against.</li>
+        </ul>
+      </li>
+      <li class="dir"><code>/Users/indydevdan/Documents/projects/yt/self-compact/ai_docs/</code>
+        <ul>
+          <li><span class="tag existing">existing</span> <code><svg class="ic"><use href="#ic-markdown"/></svg> pi-extensions.md</code> — ExtensionAPI: registerFlag/getFlag, registerTool (terminate), tool_call blocking, sendMessage delivery modes, setFooter, appendEntry, setActiveTools.</li>
+          <li><span class="tag existing">existing</span> <code><svg class="ic"><use href="#ic-markdown"/></svg> pi-compaction.md</code> — session_before_compact / session_compact / session_compact_failed contract, serializeConversation, CompactionEntry shape.</li>
+          <li><span class="tag existing">existing</span> <code><svg class="ic"><use href="#ic-markdown"/></svg> pi-session-format.md</code> — custom entries and getBranch() scanning used for note persistence and reload recovery.</li>
+          <li><span class="tag existing">existing</span> <code><svg class="ic"><use href="#ic-markdown"/></svg> pi-tui.md</code> — footer component contract (render(width) lines, truncateToWidth, theme.fg colors).</li>
+          <li><span class="tag existing">existing</span> <code><svg class="ic"><use href="#ic-markdown"/></svg> pi-rpc.md</code> — RPC protocol used by the e2e harness (prompt, compact, get_entries, notify events).</li>
+          <li><span class="tag existing">existing</span> <code><svg class="ic"><use href="#ic-markdown"/></svg> pi-custom-provider.md</code> — streamSimple contract used to build the scripted fake model for deterministic tests.</li>
+          <li><span class="tag existing">existing</span> <code><svg class="ic"><use href="#ic-markdown"/></svg> pi-sdk.md</code> — createAgentSessionServices(extensionFlagValues) for SDK-level checks.</li>
+          <li><span class="tag existing">existing</span> <code><svg class="ic"><use href="#ic-markdown"/></svg> example-extension-custom-footer.md</code> — footer pattern copied for the context bar.</li>
+          <li><span class="tag existing">existing</span> <code><svg class="ic"><use href="#ic-markdown"/></svg> example-extension-custom-compaction.md</code> — modelRegistry.complete() summary pattern (policy differs: we keep the note and lock on failure).</li>
+          <li><span class="tag existing">existing</span> <code><svg class="ic"><use href="#ic-markdown"/></svg> example-extension-structured-output.md</code> — terminate: true tool result pattern.</li>
+        </ul>
+      </li>
+    </ul>
+
+    <h3>New Files</h3>
+    <ul class="ftree">
+      <li class="dir"><code>/Users/indydevdan/Documents/projects/yt/self-compact/apps/claude-fable-5-1/extensions/self-compact/</code>
+        <ul>
+          <li><span class="tag new">new</span> <code><svg class="ic"><use href="#ic-typescript"/></svg> self-compact.ts</code> — extension entry (default export): flags, tool, commands, events, footer, compaction override, handoff delivery.</li>
+          <li><span class="tag new">new</span> <code><svg class="ic"><use href="#ic-typescript"/></svg> thresholds.ts</code> — pure: parseTokenSpec, validateSpecs, resolveThresholds (90% cap), levelFor.</li>
+          <li><span class="tag new">new</span> <code><svg class="ic"><use href="#ic-typescript"/></svg> context-bar.ts</code> — pure: renderContextBar (20 cells, # = ~ ! | markers), formatTokens.</li>
+          <li><span class="tag new">new</span> <code><svg class="ic"><use href="#ic-typescript"/></svg> prompts.ts</code> — prompt file discovery, live-value templating, built-in fallbacks, compaction prompt precedence.</li>
+          <li><span class="tag new">new</span> <code><svg class="ic"><use href="#ic-typescript"/></svg> state.ts</code> — handoff state types, session-entry persistence shape, recoverHandoff(entries) pure reducer.</li>
+        </ul>
+      </li>
+      <li class="dir"><code>/Users/indydevdan/Documents/projects/yt/self-compact/apps/claude-fable-5-1/.pi/self-compact/</code>
+        <ul>
+          <li><span class="tag new">new</span> <code><svg class="ic"><use href="#ic-markdown"/></svg> USER_PROMPT_SOFT_SELF_COMPACT.md</code> — optional heads-up with live usage values (runs from --compact-soft-at).</li>
+          <li><span class="tag new">new</span> <code><svg class="ic"><use href="#ic-markdown"/></svg> USER_PROMPT_WARNING_SELF_COMPACT.md</code> — stern "compact soon, hard cutoff at ..." message (runs from --compact-at).</li>
+          <li><span class="tag new">new</span> <code><svg class="ic"><use href="#ic-markdown"/></svg> USER_PROMPT_COMPACTION_MESSAGE.md</code> — replacement summary system prompt (overridden by --compact-prompt).</li>
+        </ul>
+      </li>
+      <li class="dir"><code>/Users/indydevdan/Documents/projects/yt/self-compact/apps/claude-fable-5-1/tests/</code>
+        <ul>
+          <li><span class="tag new">new</span> <code><svg class="ic"><use href="#ic-typescript"/></svg> unit/thresholds.test.ts</code> — parsing, defaults, cap, zero buffer, rejections.</li>
+          <li><span class="tag new">new</span> <code><svg class="ic"><use href="#ic-typescript"/></svg> unit/context-bar.test.ts</code> — exact bar strings for the DoD examples.</li>
+          <li><span class="tag new">new</span> <code><svg class="ic"><use href="#ic-typescript"/></svg> unit/prompts.test.ts</code> — templating, lookup order, precedence.</li>
+          <li><span class="tag new">new</span> <code><svg class="ic"><use href="#ic-typescript"/></svg> unit/state.test.ts</code> — recovery reducer over session entries.</li>
+          <li><span class="tag new">new</span> <code><svg class="ic"><use href="#ic-typescript"/></svg> harness/fake-provider.ts</code> — scripted Pi provider (streamSimple) with controllable usage and summary failures.</li>
+          <li><span class="tag new">new</span> <code><svg class="ic"><use href="#ic-typescript"/></svg> harness/rpc-client.ts</code> — spawn `pi --mode rpc`, LF-framed JSONL, event waiters.</li>
+          <li><span class="tag new">new</span> <code><svg class="ic"><use href="#ic-typescript"/></svg> e2e/lifecycle.test.ts</code> — notice → warning → forced lock → self_compact → compaction → note verbatim → result.txt = done.</li>
+          <li><span class="tag new">new</span> <code><svg class="ic"><use href="#ic-typescript"/></svg> e2e/failure-recovery.test.ts</code> — failed compaction keeps note + lock; /self-compact-now retry with saved note; reload recovery via --session.</li>
+          <li><span class="tag new">new</span> <code><svg class="ic"><use href="#ic-typescript"/></svg> e2e/launch-variants.test.ts</code> — three DoD launch commands + /self-compact-info resolved thresholds; /compact escape hatch; --compact-prompt literal.</li>
+          <li><span class="tag new">new</span> <code><svg class="ic"><use href="#ic-typescript"/></svg> e2e/real-model.test.ts</code> — live claude-haiku-4-5 run: forced lock → self_compact → continuation writes result.txt.</li>
+        </ul>
+      </li>
+      <li class="dir"><code>/Users/indydevdan/Documents/projects/yt/self-compact/apps/claude-fable-5-1/</code>
+        <ul>
+          <li><span class="tag new">new</span> <code><svg class="ic"><use href="#ic-json"/></svg> package.json</code> — private; npm scripts for unit, e2e, verify. No runtime dependencies (Pi supplies its packages via jiti aliases).</li>
+          <li><span class="tag new">new</span> <code><svg class="ic"><use href="#ic-json"/></svg> tsconfig.json</code> — typecheck config with path aliases into the global Pi install.</li>
+          <li><span class="tag new">new</span> <code><svg class="ic"><use href="#ic-file"/></svg> scripts/verify.sh</code> — runs every check and writes verification/ artifacts.</li>
+          <li><span class="tag new">new</span> <code><svg class="ic"><use href="#ic-markdown"/></svg> README.md</code> — launch commands, flags, commands, prompt files, verification results.</li>
+          <li><span class="tag new">new</span> <code><svg class="ic"><use href="#ic-markdown"/></svg> verification/REPORT.md</code> — DoD checklist with actual results and blockers.</li>
+        </ul>
+      </li>
+    </ul>
+  </section>
+
+  <!-- ===== DATABASE MODELS ===== -->
+  <section id="database-models" class="database-models">
+    <h2>Database Models</h2>
+    <p>No database is involved. State lives in Pi session JSONL as custom entries (see Phase 4).</p>
+    <h3>Existing Models</h3>
+    <ul class="ftree"></ul>
+    <h3>New Models</h3>
+    <ul class="ftree"></ul>
+  </section>
+
+  <!-- ===== IMPLEMENTATION PHASES ===== -->
+  <section id="phases">
+    <h2>Implementation Phases</h2>
+    <p><strong>IMPORTANT:</strong> Execute every phase and task step by step, in order, top to bottom.</p>
+    <p>Status markers: <code>[]</code> idle · <code>[wip]</code> in progress · <code>[x]</code> complete · <code>[f]</code> failed. All start as <code>[]</code>; the Build Plan workflow updates them as it works. <strong>Check off work at BOTH levels:</strong> mark each individual task/checklist box <code>[x]</code> as it lands, and mark a phase <code>[x]</code> ONLY once every task + test inside it is <code>[x]</code> (or <code>[f]</code>). A phase header must never be <code>[x]</code> while it still contains unchecked boxes.</p>
+
+    <h3 id="phase-summary">Phase Summary</h3>
+    <table class="phase-summary">
+      <thead><tr><th>Phase</th><th>Purpose</th><th>Done when</th></tr></thead>
+      <tbody>
+        <tr><td><a href="#phase-1">1. Scaffold and Threshold Engine</a></td><td>Working dir, flags, token/percent parsing, 90% cap, defaults, validation.</td><td>Extension loads via <code>pi -e</code>; threshold unit tests pass; invalid specs rejected.</td></tr>
+        <tr><td><a href="#phase-2">2. Context Bar and Footer UI</a></td><td>Pure 20-cell bar renderer plus a level-colored custom footer.</td><td>Bar tests reproduce the DoD strings exactly; footer renders in TUI.</td></tr>
+        <tr><td><a href="#phase-3">3. Prompt Engineering Files</a></td><td>Three editable prompt files, live-value templating, precedence rules.</td><td>Files exist in <code>.pi/self-compact/</code>; loader tests pass; flag overrides file overrides built-in.</td></tr>
+        <tr><td><a href="#phase-4">4. self_compact Tool and Handoff State Machine</a></td><td>Tool, lock, idle-only compaction, summary override, note return, failure/retry/reload recovery.</td><td>Deterministic lifecycle e2e passes end to end with result.txt = done.</td></tr>
+        <tr><td><a href="#phase-5">5. HIL Commands and Renderers</a></td><td><code>/self-compact-info</code>, <code>/self-compact-now</code>, message/entry/tool renderers.</td><td>Info shows all fields with no LLM turn; now includes saved note on retry; /compact untouched.</td></tr>
+        <tr><td><a href="#phase-6">6. Verification Harness and Artifacts</a></td><td>Fake provider, RPC client, e2e suites, real-model run, verify.sh, report.</td><td>Every DoD bullet has a passing check and an artifact under verification/.</td></tr>
+      </tbody>
+    </table>
+
+    <!-- ===================== PHASE 1 ===================== -->
+    <div class="phase" id="phase-1">
+      <h3><code class="status">[x]</code> Phase 1: Scaffold and Threshold Engine</h3>
+      <p>Create the working directory, a minimal <code><svg class="ic"><use href="#ic-json"/></svg> package.json</code> (no runtime deps), and the threshold module. All helper modules use erasable TypeScript only (no enums, namespaces, or parameter properties) and import each other with explicit <code>.ts</code> specifiers so both Pi's jiti loader and Node 24's native type stripping (used by <code>node --test</code>) can run them unchanged.</p>
+
+      <figure>
+        <svg viewBox="0 0 1100 300" width="1100" height="300" xmlns="http://www.w3.org/2000/svg" font-family="Menlo, Consolas, monospace">
+          <rect width="1100" height="300" fill="#121214"/>
+          <!-- window bar -->
+          <rect x="60" y="120" width="980" height="44" rx="4" fill="#0a0a0c" stroke="#27272a" stroke-width="2"/>
+          <text x="60" y="100" fill="#a0a0a6" font-size="18">0</text>
+          <text x="1040" y="100" fill="#a0a0a6" font-size="18" text-anchor="end">window</text>
+          <!-- markers: soft 22.5%, warn 25%, forced 27% (defaults on 1M) and cap 90% -->
+          <line x1="280" y1="110" x2="280" y2="176" stroke="#facc15" stroke-width="4"/>
+          <text x="280" y="210" fill="#facc15" font-size="18" text-anchor="middle">soft 225k</text>
+          <line x1="305" y1="110" x2="305" y2="176" stroke="#f5a524" stroke-width="4"/>
+          <text x="330" y="240" fill="#f5a524" font-size="18" text-anchor="middle">warn 250k</text>
+          <line x1="325" y1="110" x2="325" y2="176" stroke="#f26d6d" stroke-width="4"/>
+          <text x="400" y="270" fill="#f26d6d" font-size="18" text-anchor="middle">forced = warn + buffer</text>
+          <line x1="942" y1="110" x2="942" y2="176" stroke="#f26d6d" stroke-width="4" stroke-dasharray="6 5"/>
+          <text x="942" y="210" fill="#f26d6d" font-size="18" text-anchor="middle">cap 90%</text>
+          <text x="550" y="60" fill="#f7f7f2" font-size="22" text-anchor="middle">tokens, k, m, or % resolved per model window</text>
+        </svg>
+        <figcaption>Three thresholds on one axis. Forced is warning plus buffer, never above the 90% cap.</figcaption>
+      </figure>
+
+      <h4>1. Scaffold the working directory</h4>
+      <ul class="checklist">
+        <li><code class="status">[x]</code> Create <code>apps/claude-fable-5-1/</code> with <code>extensions/self-compact/</code>, <code>.pi/self-compact/</code>, <code>tests/{unit,harness,e2e}</code>, <code>scripts/</code>, <code>verification/</code>.</li>
+        <li><code class="status">[x]</code> Write <code><svg class="ic"><use href="#ic-json"/></svg> package.json</code> (<code>"private": true</code>, <code>"type": "module"</code>, scripts: <code>test:unit</code>, <code>test:e2e</code>, <code>test:real</code>, <code>verify</code>). No dependencies.</li>
+        <li><code class="status">[x]</code> Write <code><svg class="ic"><use href="#ic-json"/></svg> tsconfig.json</code> with <code>paths</code> mapping <code>@earendil-works/pi-coding-agent</code>, <code>@earendil-works/pi-ai</code>, <code>@earendil-works/pi-tui</code>, and <code>typebox</code> to the global Pi install so <code>tsc --noEmit</code> can typecheck the extension.</li>
+      </ul>
+
+      <h4>2. Threshold module <code><svg class="ic"><use href="#ic-typescript"/></svg> thresholds.ts</code></h4>
+      <ul class="checklist">
+        <li><code class="status">[x]</code> <code>parseTokenSpec(raw)</code>: accepts <code>"270000"</code>, <code>"100k"</code>, <code>"1.5m"</code>, <code>"20%"</code>, <code>"0"</code>; returns <code>{ kind: "tokens", value }</code> or <code>{ kind: "percent", value }</code>. Rejects blank, negative, NaN, percent &gt; 100, and fractional plain token counts with a descriptive <code>Error</code>.</li>
+        <li><code class="status">[x]</code> <code>DEFAULT_SPECS = { softAt: "225k", at: "250k", buffer: "20k" }</code> (forced = 270k). Track <code>fromDefaults</code> so window-relative clamping applies only to defaults.</li>
+        <li><code class="status">[x]</code> <code>validateSpecs(specs)</code> at load time: same-unit comparisons (soft ≤ warn; warn ≤ 90% when percent) throw immediately so <code>pi</code> reports the error before a session starts.</li>
+        <li><code class="status">[x]</code> <code>resolveThresholds(specs, contextWindow)</code>: tokens as-is, percent × window (floor); <code>cap = floor(0.9 × window)</code>; <code>forced = min(warn + buffer, cap)</code>. Explicit settings with soft &gt; warn or warn &gt; cap return <code>{ error }</code> (rejected: extension stays inert except <code>/self-compact-info</code>). Defaults that exceed a small window are clamped (warn = cap, soft = min(soft, warn)) with a one-time warning.</li>
+        <li><code class="status">[x]</code> <code>levelFor(tokens, thresholds)</code> → <code>"idle" | "notice" | "warning" | "forced" | "unknown"</code> (unknown when tokens is null right after compaction).</li>
+        <li><code class="status">[x]</code> Register flags in the entry: <code>compact-soft-at</code>, <code>compact-at</code>, <code>compact-buffer</code>, <code>compact-prompt</code> (all <code>type: "string"</code>, with descriptions that appear in <code>pi --help</code>).</li>
+      </ul>
+
+      <h4>3. Testing Strategy</h4>
+      <p>Node 24 built-in test runner (<code>node --test</code>) with native TypeScript type stripping; pure functions only, no Pi import. Edge cases: <code>0</code> buffer, <code>90%</code> exactly, mixed units (tokens vs percent), window smaller than defaults, 1,000,000-token window from the DoD.</p>
+      <ul class="checklist">
+        <li><code class="status">[x]</code> <code>node --test tests/unit/thresholds.test.ts</code> — defaults on 1M → 225000/250000/270000; <code>100k/200k/50k</code> on 1M → 100000/200000/250000; <code>20%/50%/10%</code> on 1M → 200000/500000/600000; <code>20%/50%/0</code> → forced == warn; <code>85%/10%</code> → forced capped at 900000; <code>95%</code> warn rejected; <code>-1</code>, <code>abc</code>, <code>1.5</code> rejected.</li>
+        <li><code class="status">[x]</code> <code>pi --no-extensions -e extensions/self-compact/self-compact.ts --help | grep -A5 "Extension CLI Flags"</code> — all four flags listed.</li>
+      </ul>
+      <div class="loop">🔁 <strong>Do not exit this phase until every box above is checked.</strong> If any command fails, fix the cause and re-run — loop until all pass.</div>
+    </div>
+
+    <!-- ===================== PHASE 2 ===================== -->
+    <div class="phase" id="phase-2">
+      <h3><code class="status">[x]</code> Phase 2: Context Bar and Footer UI</h3>
+      <p>A pure renderer produces the exact bar string; the footer is a thin TUI wrapper that colors it by level. Cell <code>i</code> covers <code>(5i, 5(i+1)]</code> percent. Used cells are <code>#</code> when inside the cached share and <code>=</code> otherwise; free cells are <code>-</code>. Threshold markers overlay the cell whose upper bound equals the threshold percent (index <code>ceil(pct/5) - 1</code>): <code>~</code> soft, <code>!</code> warning, <code>|</code> forced; when two markers land on the same cell the stronger one wins (<code>|</code> &gt; <code>!</code> &gt; <code>~</code>), which is how a zero buffer shows a single <code>|</code>.</p>
+
+      <figure>
+        <svg viewBox="0 0 1100 260" width="1100" height="260" xmlns="http://www.w3.org/2000/svg" font-family="Menlo, Consolas, monospace">
+          <rect width="1100" height="260" fill="#121214"/>
+          <text x="550" y="60" fill="#f7f7f2" font-size="26" text-anchor="middle">[###~====-!-|--------] 40%</text>
+          <!-- cell strip -->
+          <g font-size="22" text-anchor="middle">
+            <rect x="110" y="100" width="132" height="48" fill="#facc15" opacity=".25" stroke="#facc15"/>
+            <text x="176" y="132" fill="#facc15">###~</text>
+            <rect x="242" y="100" width="132" height="48" fill="#a0a0a6" opacity=".2" stroke="#a0a0a6"/>
+            <text x="308" y="132" fill="#f7f7f2">====</text>
+            <rect x="374" y="100" width="396" height="48" fill="#0a0a0c" stroke="#27272a"/>
+            <text x="572" y="132" fill="#a0a0a6">-!-|--------</text>
+          </g>
+          <text x="176" y="185" fill="#facc15" font-size="18" text-anchor="middle">cached 20%</text>
+          <text x="308" y="185" fill="#f7f7f2" font-size="18" text-anchor="middle">uncached 20%</text>
+          <text x="572" y="185" fill="#a0a0a6" font-size="18" text-anchor="middle">free, markers at 20 / 50 / 60</text>
+          <text x="550" y="235" fill="#a0a0a6" font-size="18" text-anchor="middle">20 cells x 5% each</text>
+        </svg>
+        <figcaption>The DoD example decoded: eight used cells, half cached, three markers overlaid on their cells.</figcaption>
+      </figure>
+
+      <h4>1. Bar renderer <code><svg class="ic"><use href="#ic-typescript"/></svg> context-bar.ts</code></h4>
+      <ul class="checklist">
+        <li><code class="status">[x]</code> <code>renderContextBar({ usedPct, cachedPct, softPct, warnPct, forcedPct, cells = 20 })</code> returns <code>{ bar, percentLabel, text }</code> where <code>text</code> is <code>[...] NN%</code>. Null usage renders 20 <code>-</code> cells with markers and <code>--%</code>.</li>
+        <li><code class="status">[x]</code> <code>formatTokens(n)</code> → <code>120.0k</code> / <code>1.0M</code> style for footer and info output.</li>
+        <li><code class="status">[x]</code> <code>usageSnapshot(ctx)</code> in the entry: tokens and percent from <code>ctx.getContextUsage()</code>; cached tokens from the latest post-compaction assistant message <code>usage.cacheRead</code> on <code>ctx.sessionManager.getBranch()</code>.</li>
+      </ul>
+
+      <h4>2. Footer</h4>
+      <ul class="checklist">
+        <li><code class="status">[x]</code> In <code>session_start</code> (TUI only: <code>ctx.mode === "tui"</code>) call <code>ctx.ui.setFooter(...)</code>: line 1 = bar colored by level (idle dim, notice accent, warning warning, forced error) + <code>used/window</code> + threshold summary + level tag / handoff status; line 2 = cwd, session name, ↑ in / ↓ out / R cache, cost, model (rebuilt from <code>getBranch()</code> like the custom-footer example). Every line goes through <code>truncateToWidth</code>.</li>
+        <li><code class="status">[x]</code> Request a re-render on <code>turn_end</code>, <code>agent_settled</code>, <code>model_select</code>, and state changes (keep a <code>tui.requestRender</code> handle from the factory).</li>
+        <li><code class="status">[x]</code> Non-TUI modes skip the footer; RPC mode gets <code>ctx.ui.setStatus("self-compact", text)</code> instead.</li>
+      </ul>
+
+      <h4>3. Testing Strategy</h4>
+      <p>Exact-string unit tests for the renderer; a TUI smoke test via tmux capture in Phase 6.</p>
+      <ul class="checklist">
+        <li><code class="status">[x]</code> <code>node --test tests/unit/context-bar.test.ts</code> — <code>[###~====-!-|--------] 40%</code> for used 40 / cached 20 / 20-50-60; markers at cells 1, 3, 4 for 10/20/25 (1M window with 100k/200k/50k); single <code>|</code> at 50% when buffer is 0; <code>[--------------------] --%</code> with markers for null usage; 100% usage fills all cells but keeps markers.</li>
+      </ul>
+      <div class="loop">🔁 <strong>Do not exit this phase until every box above is checked.</strong> If any command fails, fix the cause and re-run — loop until all pass.</div>
+    </div>
+
+    <!-- ===================== PHASE 3 ===================== -->
+    <div class="phase" id="phase-3">
+      <h3><code class="status">[x]</code> Phase 3: Prompt Engineering Files</h3>
+      <p>Three Markdown files live in <code>apps/claude-fable-5-1/.pi/self-compact/</code>. They are read fresh on every use so edits apply live. Lookup order: <code>&lt;cwd&gt;/.pi/self-compact/&lt;name&gt;</code>, then <code>&lt;extension dir&gt;/../../.pi/self-compact/&lt;name&gt;</code> (so the launch works from any cwd), then a built-in default string. Placeholders use <code>&#123;&#123;name&#125;&#125;</code> syntax.</p>
+
+      <h4>1. Write the prompt files</h4>
+      <ul class="checklist">
+        <li><code class="status">[x]</code> <code><svg class="ic"><use href="#ic-markdown"/></svg> USER_PROMPT_SOFT_SELF_COMPACT.md</code> — optional heads-up: usage <code>&#123;&#123;used_tokens&#125;&#125;</code> (<code>&#123;&#123;used_percent&#125;&#125;</code>) of <code>&#123;&#123;context_window&#125;&#125;</code>; warning at <code>&#123;&#123;warning_tokens&#125;&#125;</code>, hard cutoff at <code>&#123;&#123;forced_tokens&#125;&#125;</code>; suggests compacting at a natural checkpoint; explains the note format (goal, done, in progress, exact paths, test results, next action); tools remain available.</li>
+        <li><code class="status">[x]</code> <code><svg class="ic"><use href="#ic-markdown"/></svg> USER_PROMPT_WARNING_SELF_COMPACT.md</code> — stern: "time to compact soon; hard cutoff at &#123;&#123;forced_tokens&#125;&#125; (&#123;&#123;forced_percent&#125;&#125;), &#123;&#123;remaining_to_forced&#125;&#125; tokens left; finish the current atomic step, write the note, call self_compact now"; states that other tools will be blocked at the cutoff.</li>
+        <li><code class="status">[x]</code> <code><svg class="ic"><use href="#ic-markdown"/></svg> USER_PROMPT_COMPACTION_MESSAGE.md</code> — replacement summary system prompt: structured sections (Goal, Constraints, Progress done/in-progress/blocked, Key Decisions, Next Steps, Critical Context, read/modified files), "do not invent completed work", "preserve exact paths and commands", "the agent's own note is delivered separately, do not duplicate it".</li>
+        <li><code class="status">[x]</code> Built-in forced message (not a file): "hard cutoff reached; every tool except self_compact is blocked; write your note and call self_compact now".</li>
+      </ul>
+
+      <h4>2. Loader <code><svg class="ic"><use href="#ic-typescript"/></svg> prompts.ts</code></h4>
+      <ul class="checklist">
+        <li><code class="status">[x]</code> <code>loadPromptFile(name, searchDirs)</code> → <code>{ text, source: path | "builtin" }</code>.</li>
+        <li><code class="status">[x]</code> <code>renderTemplate(text, values)</code> replaces <code>&#123;&#123;used_tokens&#125;&#125;</code>, <code>&#123;&#123;used_percent&#125;&#125;</code>, <code>&#123;&#123;cached_tokens&#125;&#125;</code>, <code>&#123;&#123;context_window&#125;&#125;</code>, <code>&#123;&#123;soft_tokens&#125;&#125;</code>, <code>&#123;&#123;soft_percent&#125;&#125;</code>, <code>&#123;&#123;warning_tokens&#125;&#125;</code>, <code>&#123;&#123;warning_percent&#125;&#125;</code>, <code>&#123;&#123;forced_tokens&#125;&#125;</code>, <code>&#123;&#123;forced_percent&#125;&#125;</code>, <code>&#123;&#123;remaining_to_forced&#125;&#125;</code>, <code>&#123;&#123;cycle&#125;&#125;</code>, <code>&#123;&#123;note_max_chars&#125;&#125;</code>; unknown placeholders are left as-is.</li>
+        <li><code class="status">[x]</code> <code>resolveCompactionPrompt({ flag, searchDirs })</code>: <code>--compact-prompt</code> literal &gt; file &gt; built-in; returns <code>{ text, source: "flag" | path | "builtin" }</code>.</li>
+        <li><code class="status">[x]</code> Built-in defaults for all three prompts are embedded as constants so the extension still works if the files are deleted.</li>
+      </ul>
+
+      <h4>3. Testing Strategy</h4>
+      <p>Unit tests over a temp directory tree: file found in cwd, file found in extension fallback, built-in fallback, placeholder rendering, and precedence with the flag.</p>
+      <ul class="checklist">
+        <li><code class="status">[x]</code> <code>node --test tests/unit/prompts.test.ts</code> — all lookup and templating cases pass; the three real files contain their required placeholders.</li>
+      </ul>
+      <div class="loop">🔁 <strong>Do not exit this phase until every box above is checked.</strong> If any command fails, fix the cause and re-run — loop until all pass.</div>
+    </div>
+
+    <!-- ===================== PHASE 4 ===================== -->
+    <div class="phase" id="phase-4">
+      <h3><code class="status">[x]</code> Phase 4: self_compact Tool and Handoff State Machine</h3>
+      <p>The core. State is one in-memory object mirrored to session custom entries (<code>customType: "self-compact"</code>) on every transition so a reload rebuilds it. Locking is enforced in <code>tool_call</code> (authoritative, per Pi's preflight contract). The active tool list is deliberately left untouched: narrowing it made Pi answer "Tool X not found" before <code>tool_call</code> ran, which hid the reason from the model (see Amendments).</p>
+
+      <figure>
+        <svg viewBox="0 0 1100 520" width="1100" height="520" xmlns="http://www.w3.org/2000/svg" font-family="Menlo, Consolas, monospace">
+          <rect width="1100" height="520" fill="#121214"/>
+          <!-- lanes -->
+          <g font-size="18" fill="#a0a0a6">
+            <text x="20" y="70">agent</text>
+            <text x="20" y="190">extension</text>
+            <text x="20" y="310">pi core</text>
+            <text x="20" y="430">session file</text>
+          </g>
+          <g stroke="#27272a" stroke-width="2">
+            <line x1="150" y1="60" x2="1080" y2="60"/>
+            <line x1="150" y1="180" x2="1080" y2="180"/>
+            <line x1="150" y1="300" x2="1080" y2="300"/>
+            <line x1="150" y1="420" x2="1080" y2="420"/>
+          </g>
+          <!-- step boxes -->
+          <g font-size="18" text-anchor="middle">
+            <rect x="150" y="30" width="240" height="60" rx="5" fill="#0a0a0c" stroke="#facc15" stroke-width="2"/>
+            <text x="270" y="66" fill="#f7f7f2">self_compact(note)</text>
+            <rect x="150" y="150" width="240" height="60" rx="5" fill="#0a0a0c" stroke="#facc15" stroke-width="2"/>
+            <text x="270" y="186" fill="#f7f7f2">validate, save, lock</text>
+            <rect x="150" y="390" width="240" height="60" rx="5" fill="#0a0a0c" stroke="#a0a0a6" stroke-width="2"/>
+            <text x="270" y="426" fill="#f7f7f2">entry: pending</text>
+
+            <rect x="420" y="270" width="200" height="60" rx="5" fill="#0a0a0c" stroke="#a0a0a6" stroke-width="2"/>
+            <text x="520" y="306" fill="#f7f7f2">agent_settled</text>
+            <rect x="420" y="150" width="200" height="60" rx="5" fill="#0a0a0c" stroke="#facc15" stroke-width="2"/>
+            <text x="520" y="186" fill="#f7f7f2">ctx.compact()</text>
+
+            <rect x="660" y="150" width="220" height="60" rx="5" fill="#0a0a0c" stroke="#facc15" stroke-width="2"/>
+            <text x="770" y="186" fill="#f7f7f2">summary (override)</text>
+            <rect x="670" y="270" width="200" height="60" rx="5" fill="#0a0a0c" stroke="#a0a0a6" stroke-width="2"/>
+            <text x="770" y="306" fill="#f7f7f2">session_compact</text>
+            <rect x="670" y="390" width="200" height="60" rx="5" fill="#0a0a0c" stroke="#a0a0a6" stroke-width="2"/>
+            <text x="770" y="426" fill="#f7f7f2">entry: done</text>
+
+            <rect x="900" y="150" width="170" height="60" rx="5" fill="#0a0a0c" stroke="#8bd450" stroke-width="2"/>
+            <text x="985" y="186" fill="#8bd450">unlock + note</text>
+            <rect x="900" y="30" width="170" height="60" rx="5" fill="#0a0a0c" stroke="#8bd450" stroke-width="2"/>
+            <text x="985" y="66" fill="#f7f7f2">continue</text>
+          </g>
+          <!-- arrows -->
+          <g stroke="#a0a0a6" stroke-width="2" fill="#a0a0a6">
+            <line x1="270" y1="90" x2="270" y2="142"/><polygon points="270,142 265,132 275,132"/>
+            <line x1="270" y1="210" x2="270" y2="382"/><polygon points="270,382 265,372 275,372"/>
+            <line x1="390" y1="180" x2="412" y2="180" stroke-dasharray="5 5"/>
+            <line x1="520" y1="270" x2="520" y2="218"/><polygon points="520,218 515,228 525,228"/>
+            <line x1="620" y1="180" x2="652" y2="180"/><polygon points="652,180 642,175 642,185"/>
+            <line x1="770" y1="210" x2="770" y2="262"/><polygon points="770,262 765,252 775,252"/>
+            <line x1="770" y1="330" x2="770" y2="382"/><polygon points="770,382 765,372 775,372"/>
+            <line x1="870" y1="300" x2="985" y2="300"/><line x1="985" y1="300" x2="985" y2="218"/><polygon points="985,218 980,228 990,228"/>
+            <line x1="985" y1="150" x2="985" y2="98"/><polygon points="985,98 980,108 990,108"/>
+          </g>
+          <text x="600" y="500" fill="#f26d6d" font-size="18" text-anchor="middle">failure: entry stays pending, lock stays on, retry then /self-compact-now</text>
+        </svg>
+        <figcaption>Handoff sequence across agent, extension, Pi core, and the session file. Nothing unlocks until the summary is saved.</figcaption>
+      </figure>
+
+      <h4>1. State model <code><svg class="ic"><use href="#ic-typescript"/></svg> state.ts</code></h4>
+      <ul class="checklist">
+        <li><code class="status">[x]</code> Types: <code>HandoffStatus = "none" | "pending" | "compacting" | "failed" | "done"</code>; <code>SelfCompactState = { level, thresholds, handoff: { status, note, savedAt, attempts, lastError }, cycle, locked, savedActiveTools, noticeSentCycle, warningSentTurn, forcedSentCycle, turnCounter }</code>.</li>
+        <li><code class="status">[x]</code> Persistence shape for <code>pi.appendEntry("self-compact", data)</code>: <code>{ kind: "handoff", status, note, cycle, attempts, lastError, at }</code>.</li>
+        <li><code class="status">[x]</code> <code>recoverHandoff(branchEntries)</code> pure reducer: latest handoff entry wins; a <code>compaction</code> entry after a pending/compacting/failed entry means the summary landed but the note was never delivered → status <code>"done-undelivered"</code> so the note is delivered on the next idle instead of compacting again; <code>"done"</code> → nothing pending.</li>
+      </ul>
+
+      <h4>2. The tool</h4>
+      <ul class="checklist">
+        <li><code class="status">[x]</code> <code>pi.registerTool({ name: "self_compact", parameters: { note_to_self: string } })</code> with a <code>promptSnippet</code> and <code>promptGuidelines</code> that name the tool explicitly and describe the note contents.</li>
+        <li><code class="status">[x]</code> <code>execute</code>: trim; blank → <code>throw Error("note_to_self must not be blank")</code>; length &gt; 24,000 chars → <code>throw Error("note_to_self exceeds 24000 characters (N)")</code>. Valid → set handoff pending, persist entry, lock tools, return <code>{ content: "Note saved (N chars). Compaction runs when this turn ends...", details: { note, cycle }, terminate: true }</code>.</li>
+        <li><code class="status">[x]</code> Calling <code>self_compact</code> again while pending replaces the note (latest wins) and stays locked.</li>
+      </ul>
+
+      <h4>3. Usage checks and prompt delivery</h4>
+      <ul class="checklist">
+        <li><code class="status">[x]</code> <code>turn_end</code>: snapshot usage, compute level. On first entry into notice per cycle → send soft prompt as <code>pi.sendMessage({ customType: "self-compact", details: { kind: "notice" } }, { deliverAs: "steer" })</code>; if the agent is idle at that moment use <code>deliverAs: "nextTurn"</code>.</li>
+        <li><code class="status">[x]</code> Warning: send on entry; while still in warning without a pending note, re-send at most every 4 turns.</li>
+        <li><code class="status">[x]</code> Forced: lock (block every tool except <code>self_compact</code> in <code>tool_call</code> with an explicit reason; the active tool list is left untouched, see Amendments), send the built-in forced message once per epoch. A zero buffer makes forced coincide with warning, so the forced prompt and the lock happen in the same turn.</li>
+        <li><code class="status">[x]</code> <code>tool_call</code>: when <code>locked && toolName !== "self_compact"</code> return <code>{ block: true, reason: "Context is at X% (≥ forced Y%). Every tool except self_compact is blocked. Write your note_to_self and call self_compact now." }</code>.</li>
+        <li><code class="status">[x]</code> Re-resolve thresholds on <code>model_select</code> (window may change) and refresh the footer.</li>
+      </ul>
+
+      <h4>4. Idle-only compaction and summary override</h4>
+      <ul class="checklist">
+        <li><code class="status">[x]</code> <code>agent_settled</code>: if handoff pending or failed-with-auto-retry and <code>ctx.isIdle()</code> → status compacting, persist, <code>ctx.compact({ onError })</code>. Never compact from inside the tool.</li>
+        <li><code class="status">[x]</code> <code>session_before_compact</code> (all reasons, including built-in <code>/compact</code> and Pi threshold/overflow): build system prompt via <code>resolveCompactionPrompt</code>; user message = optional <code>&lt;previous-summary&gt;</code> + <code>serializeConversation(convertToLlm([...messagesToSummarize, ...turnPrefixMessages]))</code> + <code>customInstructions</code> from <code>/compact &lt;text&gt;</code> if present, trimmed to fit <code>window - 8192 - margin</code> using <code>estimateTokens</code> (drop oldest first). Call <code>ctx.modelRegistry.complete(ctx.model, { systemPrompt, messages }, { maxTokens: 8192, signal, cacheRetention: "none", sessionId: uuidv7() })</code>. Retry once on error. Return <code>{ compaction: { summary, firstKeptEntryId, tokensBefore, usage, details: { selfCompact: { cycle, promptSource, noteChars } } } }</code>. On final failure: record <code>lastError</code>, notify, return <code>{ cancel: true }</code>.</li>
+        <li><code class="status">[x]</code> <code>session_compact</code>: if a handoff is pending/compacting → status done, <code>cycle++</code>, persist, unlock (restore saved active tools), reset per-cycle prompt flags, then on a <code>setTimeout(0)</code> deliver the note: <code>pi.sendMessage({ customType: "self-compact", content: "Self-compaction complete (cycle N). Your note to self, verbatim:\n\n&lt;note&gt;\n\nContinue from the next action in the note. Do not redo completed work.", details: { kind: "handoff", note, cycle } }, { triggerTurn: true, deliverAs: "followUp" })</code>. Streaming (overflow retry) → follow-up queue; idle → new turn immediately, no user message needed.</li>
+        <li><code class="status">[x]</code> <code>session_compact_failed</code>: keep note and lock; status failed, <code>attempts++</code>, persist. If the failure came from our summarizer (<code>lastError</code> set) and <code>attempts &lt; 3</code> → schedule <code>ctx.compact()</code> again after 2s × attempts; if aborted by the user → stay locked and notify "note kept; run /self-compact-now or /compact to retry".</li>
+        <li><code class="status">[x]</code> <code>session_start</code>: read flags, resolve thresholds against <code>ctx.model</code>, run <code>recoverHandoff(ctx.sessionManager.getBranch())</code>; pending/failed → restore note, lock, notify; done-undelivered → deliver note with <code>deliverAs: "nextTurn"</code>; then install the footer.</li>
+        <li><code class="status">[x]</code> <code>session_shutdown</code>: persist a final state entry if anything changed; clear timers.</li>
+      </ul>
+
+      <h4>5. Testing Strategy</h4>
+      <p>Unit tests for the recovery reducer; the deterministic e2e in Phase 6 drives the whole machine through the real CLI with a scripted provider. During this phase run a quick manual smoke: <code>pi -e ... --model fake/scripted</code> in RPC mode with the fake provider from Phase 6 pulled forward as needed.</p>
+      <ul class="checklist">
+        <li><code class="status">[x]</code> <code>node --test tests/unit/state.test.ts</code> — pending restored; failed restored with attempts; done ignored; compaction-after-pending → done-undelivered; latest entry wins.</li>
+        <li><code class="status">[x]</code> <code>node --test tests/e2e/lifecycle.test.ts</code> — passes (written in Phase 6, executed here once available).</li>
+      </ul>
+      <div class="loop">🔁 <strong>Do not exit this phase until every box above is checked.</strong> If any command fails, fix the cause and re-run — loop until all pass.</div>
+    </div>
+
+    <!-- ===================== PHASE 5 ===================== -->
+    <div class="phase" id="phase-5">
+      <h3><code class="status">[x]</code> Phase 5: HIL Commands and Renderers</h3>
+      <p>Two slash commands and the TUI polish. Neither command starts an LLM turn on its own; <code>/self-compact-now</code> asks the agent through a user message so the tool is never bypassed. Built-in <code>/compact</code> is left untouched; it simply flows through the same <code>session_before_compact</code> override.</p>
+
+      <h4>1. <code>/self-compact-info</code></h4>
+      <ul class="checklist">
+        <li><code class="status">[x]</code> Compose: raw flag values and their sources (flag/default), resolved thresholds in tokens and percent, cap, model + window, usage (tokens, percent, cached), level, lock state, handoff status, cycle count, prompt sources (soft/warning/compaction: path, flag, or builtin) with character counts, pending note preview (first 200 chars + length), last error, attempts.</li>
+        <li><code class="status">[x]</code> Output: <code>pi.appendEntry("self-compact-info", data)</code> (rendered as a card in TUI via <code>registerEntryRenderer</code>; durable and readable via RPC <code>get_entries</code>) plus <code>ctx.ui.notify(text)</code> when <code>ctx.mode !== "tui" && ctx.hasUI</code>. No <code>sendMessage</code>, no turn.</li>
+        <li><code class="status">[x]</code> If thresholds were rejected, the card shows the error and that the extension is inert.</li>
+      </ul>
+
+      <h4>2. <code>/self-compact-now</code></h4>
+      <ul class="checklist">
+        <li><code class="status">[x]</code> Build the request text: "Write your note_to_self and call self_compact now" + note format guidance. If a saved note exists (pending/failed): append "A note is already saved from a previous attempt; pass it verbatim to self_compact instead of inventing a new one:" followed by the note.</li>
+        <li><code class="status">[x]</code> Deliver with <code>pi.sendUserMessage(text)</code> when idle, or <code>{ deliverAs: "steer" }</code> when streaming. Notify the human what was queued.</li>
+      </ul>
+
+      <h4>3. Renderers</h4>
+      <ul class="checklist">
+        <li><code class="status">[x]</code> <code>registerMessageRenderer("self-compact", ...)</code>: notice (accent), warning (warning), forced (error), handoff (success) with a one-line header and the body; expanded shows details.</li>
+        <li><code class="status">[x]</code> <code>registerEntryRenderer("self-compact", ...)</code> and <code>("self-compact-info", ...)</code>: compact state lines and the info card.</li>
+        <li><code class="status">[x]</code> Tool <code>renderCall</code>/<code>renderResult</code>: <code>self_compact · note 1,234 chars</code>; result shows saved/rejected.</li>
+      </ul>
+
+      <h4>4. Testing Strategy</h4>
+      <p>RPC-driven checks (no LLM for info; scripted model for now) in Phase 6 launch-variants and failure-recovery suites.</p>
+      <ul class="checklist">
+        <li><code class="status">[x]</code> <code>node --test tests/e2e/launch-variants.test.ts</code> — <code>/self-compact-info</code> emits no <code>agent_start</code>, and the notify/entry contains resolved thresholds for all three launches.</li>
+        <li><code class="status">[x]</code> <code>node --test tests/e2e/failure-recovery.test.ts</code> — <code>/self-compact-now</code> user message contains the saved note verbatim on retry.</li>
+      </ul>
+      <div class="loop">🔁 <strong>Do not exit this phase until every box above is checked.</strong> If any command fails, fix the cause and re-run — loop until all pass.</div>
+    </div>
+
+    <!-- ===================== PHASE 6 ===================== -->
+    <div class="phase" id="phase-6">
+      <h3><code class="status">[x]</code> Phase 6: Verification Harness and Artifacts</h3>
+      <p>Deterministic first, live second. A scripted provider registered by a test-only extension (<code><svg class="ic"><use href="#ic-typescript"/></svg> tests/harness/fake-provider.ts</code>, loaded with a second <code>-e</code>) reports whatever usage the scenario needs, so every threshold crossing, the lock, the compaction call, and the note delivery are checked through the real CLI (<code>pi --mode rpc</code>) with real built-in tools writing real files. One live run on <code>anthropic/claude-haiku-4-5</code> proves a real model follows the prompts and resumes work after the handoff.</p>
+
+      <h4>1. Scripted provider and RPC client</h4>
+      <ul class="checklist">
+        <li><code class="status">[x]</code> <code>fake-provider.ts</code>: <code>pi.registerProvider("fake", { apiKey: "fake", api: "openai-completions", models: [{ id: "scripted", contextWindow: 100000, maxTokens: 8192 }], streamSimple })</code>. Policy per request: summary request (no tools in context) → text <code>FAKE-SUMMARY[&lt;first 60 chars of systemPrompt&gt;]</code> or an error for the first <code>SC_FAKE_SUMMARY_FAIL</code> calls; last message is our handoff → <code>write</code> result.txt with <code>done</code> then text "Task complete"; last message is a blocked-tool error or (scenario <code>obey-warning</code>) our warning → <code>self_compact</code> with a fixed note; user message containing "saved" note → <code>self_compact</code> with that note; otherwise <code>bash echo step N</code>. Usage: <code>input = SC_FAKE_BASE + turn × SC_FAKE_STEP</code>, <code>cacheRead = input</code> (half cached), <code>totalTokens = input + cacheRead + output</code>.</li>
+        <li><code class="status">[x]</code> <code>rpc-client.ts</code>: spawn <code>pi --mode rpc --no-session</code> (or <code>--session-dir</code>) with given args/env/cwd; strict LF framing; <code>send(cmd)</code>, <code>waitFor(predicate, timeoutMs)</code>, <code>events[]</code>, <code>close()</code>.</li>
+      </ul>
+
+      <h4>2. E2E suites</h4>
+      <ul class="checklist">
+        <li><code class="status">[x]</code> <code>lifecycle.test.ts</code> (soft 20%, at 50%, buffer 10%, window 100k, step 15k): notice message after usage ≥ 20%; warning after ≥ 50%; forced after ≥ 60% with a blocked <code>bash</code> (isError, reason names self_compact); <code>self_compact</code> tool result ok; <code>compaction_start</code>/<code>compaction_end</code> with our summary; handoff custom message containing the note verbatim; <code>result.txt</code> == <code>done</code>; entries show pending → done, cycle 1; tools unlocked afterwards (write succeeded).</li>
+        <li><code class="status">[x]</code> <code>lifecycle.test.ts</code> also: blank note rejected (isError), 24,001-char note rejected, 24,000-char note accepted.</li>
+        <li><code class="status">[x]</code> <code>failure-recovery.test.ts</code>: <code>SC_FAKE_SUMMARY_FAIL=99</code> → compaction fails, note retained, next <code>bash</code> still blocked; <code>/self-compact-now</code> user message includes the saved note verbatim; restart with <code>--session &lt;file&gt;</code> and <code>SC_FAKE_SUMMARY_FAIL=0</code> → pending restored on <code>session_start</code>, tools still locked, retry succeeds, note delivered, result.txt written.</li>
+        <li><code class="status">[x]</code> <code>launch-variants.test.ts</code>: (a) defaults on <code>anthropic/claude-sonnet-4-5</code> (1M) → info shows 225000/250000/270000; (b) <code>100k/200k/50k</code> → 100000/200000/250000; (c) <code>20%/50%/0 --compact-prompt "..."</code> on <code>fake/scripted</code> → info shows 20000/50000/50000 and prompt source "flag"; a <code>compact</code> RPC command returns a summary starting with <code>FAKE-SUMMARY[Summarize the current goal</code> (literal prompt used); no <code>agent_start</code> during info.</li>
+        <li><code class="status">[x]</code> <code>real-model.test.ts</code> (opt-in via <code>SC_REAL=1</code>): haiku with <code>--compact-soft-at 6k --compact-at 10k --compact-buffer 2k</code>, task: read a generated 12k-token file, then handle the handoff; assert <code>self_compact</code> called, compaction succeeded, <code>result.txt</code> == <code>done</code>, and the note round-tripped verbatim.</li>
+      </ul>
+
+      <h4>3. Scripts, artifacts, docs</h4>
+      <ul class="checklist">
+        <li><code class="status">[x]</code> <code>scripts/verify.sh</code>: typecheck, unit, e2e, real (when <code>SC_REAL=1</code>), <code>pi --help</code> flag listing, tmux TUI footer capture (best effort), all logs into <code>verification/</code>.</li>
+        <li><code class="status">[x]</code> <code>verification/REPORT.md</code>: every DoD bullet → check → result → artifact path; remaining blockers listed honestly.</li>
+        <li><code class="status">[x]</code> <code>README.md</code>: the three launch commands, flags, defaults, commands, prompt files, how to run verification.</li>
+      </ul>
+
+      <h4>4. Testing Strategy</h4>
+      <p>The harness is the test. Everything runs from <code>apps/claude-fable-5-1</code>; sessions and temp files stay under <code>verification/</code>.</p>
+      <ul class="checklist">
+        <li><code class="status">[x]</code> <code>npm run test:unit</code> — all unit suites green.</li>
+        <li><code class="status">[x]</code> <code>npm run test:e2e</code> — lifecycle, failure-recovery, launch-variants green.</li>
+        <li><code class="status">[x]</code> <code>SC_REAL=1 npm run test:real</code> — live haiku run green with result.txt = done.</li>
+        <li><code class="status">[x]</code> <code>bash scripts/verify.sh</code> — exit 0, artifacts written.</li>
+      </ul>
+      <div class="loop">🔁 <strong>Do not exit this phase until every box above is checked.</strong> If any command fails, fix the cause and re-run — loop until all pass.</div>
+    </div>
+  </section>
+
+  <!-- ===== GLOBAL VALIDATION ===== -->
+  <section id="validation">
+    <h2>Validation Commands</h2>
+    <p>Execute these commands from <code>apps/claude-fable-5-1/</code> to validate the entire plan is complete:</p>
+    <ul class="checklist">
+      <li><code class="status">[x]</code> <code>ls extensions/self-compact/self-compact.ts .pi/self-compact/USER_PROMPT_SOFT_SELF_COMPACT.md .pi/self-compact/USER_PROMPT_WARNING_SELF_COMPACT.md .pi/self-compact/USER_PROMPT_COMPACTION_MESSAGE.md</code> — deliverables exist in the required places.</li>
+      <li><code class="status">[x]</code> <code>pi --no-extensions -e extensions/self-compact/self-compact.ts --help | grep -c "compact-"</code> — four flags registered.</li>
+      <li><code class="status">[x]</code> <code>npx -y -p typescript tsc --noEmit -p tsconfig.json</code> — extension typechecks against Pi v0.85.1 types.</li>
+      <li><code class="status">[x]</code> <code>npm run test:unit</code> — thresholds, context bar, prompts, state.</li>
+      <li><code class="status">[x]</code> <code>npm run test:e2e</code> — lifecycle, failure recovery, launch variants through the real CLI.</li>
+      <li><code class="status">[x]</code> <code>SC_REAL=1 npm run test:real</code> — real model resumes real work; <code>cat verification/real/result.txt</code> prints <code>done</code>.</li>
+      <li><code class="status">[x]</code> <code>bash scripts/verify.sh</code> — full run, artifacts in <code>verification/</code>, <code>verification/REPORT.md</code> updated with actual results.</li>
+    </ul>
+    <div class="loop">🔁 <strong>The plan is not complete until every box is checked and every command passes. If for some reason a step is not possible to complete, mark it with [f] and move on if possible.</strong></div>
+  </section>
+
+  <!-- ===== NOTES ===== -->
+  <section id="notes">
+    <h2>Notes</h2>
+
+    <h3>Facts verified against the installed Pi v0.85.1</h3>
+    <ul>
+      <li><code>ctx.getContextUsage()</code> returns <code>{ tokens: number | null, contextWindow, percent: number | null }</code>; tokens are <code>usage.totalTokens</code> (input + output + cacheRead + cacheWrite) of the last non-aborted assistant message plus an estimate for trailing messages; <code>null</code> right after a compaction until the next response.</li>
+      <li>Extension flags: <code>pi.registerFlag(name, { type: "string" })</code>; unknown <code>--foo value</code> pairs are collected by the CLI and matched to registered flags after extensions load. Probed: <code>--compact-soft-at 20% --compact-buffer 0</code> → <code>getFlag</code> returns <code>"20%"</code> and <code>"0"</code>. In the SDK, <code>createAgentSessionServices({ extensionFlagValues })</code> carries the same map.</li>
+      <li>Throwing inside a <code>session_before_compact</code> handler is caught and logged, and Pi then runs its default summarizer. To keep the prompt override honest on failure, the handler returns <code>{ cancel: true }</code> (Pi reports it as aborted) after recording the real error for <code>/self-compact-info</code>.</li>
+      <li><code>pi.sendMessage(..., { triggerTurn: true })</code> starts a run immediately when idle; while streaming, <code>deliverAs: "followUp"</code> queues it. Delivery is deferred with <code>setTimeout(0)</code> from <code>session_compact</code> so the compaction state is cleared first.</li>
+      <li><code>terminate: true</code> ends the run only when every result in the batch terminates; sibling tools keep running. That is why compaction is started from <code>agent_settled</code>, never from the tool.</li>
+      <li>jiti aliases <code>@earendil-works/pi-coding-agent</code>, <code>@earendil-works/pi-ai</code>, <code>@earendil-works/pi-tui</code>, and <code>typebox</code> to Pi's own copies for <code>-e</code> extensions, so the extension needs no <code>node_modules</code>.</li>
+      <li>Anthropic credentials are present via <code>ANTHROPIC_API_KEY</code>; <code>claude-haiku-4-5</code> (200k) and <code>claude-sonnet-4-5</code> (1M) are listed by <code>pi --list-models</code>.</li>
+    </ul>
+
+    <h3>Decisions</h3>
+    <ul>
+      <li><strong>D1 Defaults.</strong> soft 225k, warning 250k, buffer 20k (forced 270k) per the DoD. On models whose window is smaller than the defaults (for example 200k), the defaults are clamped to the 90% cap with a warning instead of rejecting, because rejecting our own defaults would make the bare launch fail.</li>
+      <li><strong>D2 Enforcement.</strong> Block in <code>tool_call</code> (Pi's documented preflight path) with a reason that names <code>self_compact</code>. Narrowing <code>setActiveTools</code> was tried and dropped: Pi rejects calls to inactive tools with "Tool X not found" before <code>tool_call</code> runs, so the model never saw why. Prompt text alone is not trusted to enforce access.</li>
+      <li><strong>D3 Summary override.</strong> The extension generates the summary itself so <code>--compact-prompt</code> and the compaction file truly replace the system prompt. <code>/compact &lt;instructions&gt;</code> text is appended to the user message, not the system prompt.</li>
+      <li><strong>D4 Note delivery.</strong> A custom message (converted to a user-role message by Pi) with a short header and the verbatim note; <code>display: true</code> renders it in green in the transcript.</li>
+      <li><strong>D5 Testing without cost.</strong> A scripted provider drives every deterministic scenario through the real CLI; one live haiku run is the "real work" proof.</li>
+    </ul>
+
+    <h3>Risks</h3>
+    <ul>
+      <li><strong>R1</strong> A model may call <code>self_compact</code> in the same batch as other tools; those siblings still run (documented Pi behavior). Mitigation: compaction only after <code>agent_settled</code>.</li>
+      <li><strong>R2</strong> Very large contexts could make the summary request itself overflow. Mitigation: trim the serialized conversation oldest-first to fit the window minus 8192 output tokens.</li>
+      <li><strong>R3</strong> Pi's own threshold auto-compaction (<code>reserveTokens</code>) can fire before ours on tiny windows. Both paths use the same override handler, and a pending note is delivered either way.</li>
+    </ul>
+
+    <figure>
+      <svg viewBox="0 0 1100 260" width="1100" height="260" xmlns="http://www.w3.org/2000/svg" font-family="Menlo, Consolas, monospace">
+        <rect width="1100" height="260" fill="#121214"/>
+        <g font-size="18" text-anchor="middle">
+          <rect x="60" y="80" width="220" height="80" rx="6" fill="#0a0a0c" stroke="#facc15" stroke-width="2"/>
+          <text x="170" y="115" fill="#f7f7f2">--compact-prompt</text>
+          <text x="170" y="142" fill="#facc15">flag literal</text>
+          <rect x="420" y="80" width="260" height="80" rx="6" fill="#0a0a0c" stroke="#a0a0a6" stroke-width="2"/>
+          <text x="550" y="115" fill="#f7f7f2">COMPACTION_MESSAGE.md</text>
+          <text x="550" y="142" fill="#a0a0a6">.pi/self-compact</text>
+          <rect x="820" y="80" width="220" height="80" rx="6" fill="#0a0a0c" stroke="#27272a" stroke-width="2"/>
+          <text x="930" y="115" fill="#f7f7f2">built-in default</text>
+          <text x="930" y="142" fill="#a0a0a6">in prompts.ts</text>
+        </g>
+        <g stroke="#a0a0a6" stroke-width="2" fill="#a0a0a6">
+          <line x1="280" y1="120" x2="412" y2="120"/><polygon points="412,120 402,115 402,125"/>
+          <line x1="680" y1="120" x2="812" y2="120"/><polygon points="812,120 802,115 802,125"/>
+        </g>
+        <text x="550" y="215" fill="#a0a0a6" font-size="18" text-anchor="middle">first present wins</text>
+      </svg>
+      <figcaption>Summary prompt precedence: flag, then file, then built-in.</figcaption>
+    </figure>
+  </section>
+
+  <!-- ===== AMENDMENTS ===== -->
+  <section id="amendments">
+    <h2>Amendments</h2>
+    <details>
+      <summary>2026-09-15T16:10:42Z — Build: lock is tool_call-only; flags read lazily; rejection is enforced, not thrown</summary>
+      <p>Three findings from the deterministic e2e runs changed the build. (1) Narrowing the active tool list at the forced threshold made Pi return "Tool bash not found" before the <code>tool_call</code> hook, so the model never saw the reason naming <code>self_compact</code> and the scripted agent looped; the lock now relies solely on the <code>tool_call</code> block with an explicit reason. (2) <code>pi.getFlag()</code> returns only defaults inside the factory because Pi applies CLI flag values after extensions load; settings are now read in <code>session_start</code>. (3) Throwing from the factory on invalid settings is swallowed in print/JSON modes (pi kept running unprotected), so rejection now keeps the error in state, notifies, and blocks every tool with the error as the reason. Phase 4 text and decision D2 were updated to match.</p>
+    </details>
+
+  </section>
+
+</main>
+</body>
+</html>

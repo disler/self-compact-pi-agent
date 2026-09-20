@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" role="img" aria-label="Agent">
+  <circle cx="12" cy="3" r="1.4" fill="#8B5CF6"/>
+  <path d="M12 4.4V7" stroke="#8B5CF6" stroke-width="1.8" stroke-linecap="round"/>
+  <rect x="4" y="7" width="16" height="12" rx="4" fill="none" stroke="#8B5CF6" stroke-width="1.8"/>
+  <circle cx="9.5" cy="13" r="1.6" fill="#8B5CF6"/>
+  <circle cx="14.5" cy="13" r="1.6" fill="#8B5CF6"/>
+</svg>

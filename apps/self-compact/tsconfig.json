@@ -1,0 +1,22 @@
+{
+  // Typecheck-only config. Runtime needs no node_modules: Pi's jiti loader aliases
+  // @earendil-works/* and typebox to Pi's own copies, and Node 24 strips the types for the tests.
+  //
+  // Pi's type declarations live wherever npm installed Pi globally, so `scripts/typecheck.sh`
+  // resolves that path at run time into tsconfig.tsc.json (gitignored) which extends this file.
+  // Run `npm run typecheck`, not `tsc -p tsconfig.json` directly.
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "lib": ["ES2022"],
+    "strict": true,
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "verbatimModuleSyntax": true,
+    "types": ["node"]
+  },
+  "include": ["extensions/**/*.ts", "tests/**/*.ts"]
+}

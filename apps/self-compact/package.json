@@ -1,0 +1,16 @@
+{
+  "name": "self-compact",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Self-compacting Pi coding-agent extension: self_compact(note_to_self), three context thresholds, one-line footer with the context bar, editable prompt files, HIL commands. Merged from the claude-fable-5-1 and gpt-6-astra builds.",
+  "type": "module",
+  "scripts": {
+    "test:unit": "node --test \"tests/unit/*.test.ts\"",
+    "test:parity": "node --test \"tests/parity/*.test.mjs\"",
+    "test:e2e": "node --test --test-concurrency=1 tests/e2e/lifecycle.test.ts tests/e2e/failure-recovery.test.ts tests/e2e/launch-variants.test.ts",
+    "test:real": "node --test --test-timeout=600000 tests/e2e/real-model.test.ts",
+    "typecheck": "bash scripts/typecheck.sh",
+    "verify": "bash scripts/verify.sh"
+  },
+  "engines": { "node": ">=24" }
+}

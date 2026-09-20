@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Plan: Self-Compaction Pi Extension</title>
+<style>
+  :root{
+    --bg:#0a0a0c; --bg2:#121214; --panel:#161618; --border:#27272a;
+    --text:#f7f7f2; --muted:#a0a0a6; --dim:#6b6b72;
+    --accent:#facc15; --accent2:#ffd83d; --teal:#2DD4BF; --violet:#8B5CF6; --red:#f87171;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;font-size:20px;line-height:1.55}
+  section,.phase{scroll-margin-top:1rem}
+  main{max-width:1080px;margin:0 auto;padding:2rem 1.5rem 6rem}
+  h1{font-size:2.4rem;letter-spacing:-.01em;margin:.2em 0 .1em}
+  h2{font-size:1.7rem;color:var(--accent2);border-bottom:2px solid var(--border);padding-bottom:.3rem;margin-top:2.6rem}
+  h3{font-size:1.25rem;color:var(--text);margin-top:1.8rem}
+  h4{font-size:1.05rem;color:var(--accent);margin-top:1.4rem}
+  p{color:var(--muted)}
+  code{background:#1d1d20;border:1px solid var(--border);border-radius:5px;padding:.08em .4em;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.86em;color:var(--accent2)}
+  pre{background:#101012;border:1px solid var(--border);border-radius:8px;padding:1rem;overflow:auto}
+  pre code{background:none;border:0;padding:0;color:var(--text);font-size:.8rem}
+  a{color:var(--accent);text-decoration:none}
+  a:hover{text-decoration:underline}
+  .meta{color:var(--dim);font-size:.85rem}
+  .meta dl{display:grid;grid-template-columns:8rem 1fr;gap:.2rem 1rem;margin:.4rem 0}
+  .meta dt{color:var(--muted)}
+  figure{margin:1.6rem 0;text-align:center}
+  figure svg{max-width:100%;height:auto}
+  figcaption{color:var(--dim);font-size:.85rem;margin-top:.5rem}
+  .toc{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:1rem 1.4rem;margin:1.5rem 0}
+  .toc h2{margin-top:0;border:0;color:var(--text);font-size:1.2rem}
+  .toc ol{margin:.3rem 0 .3rem 1.2rem;color:var(--muted)}
+  .toc ol ol{font-size:.9rem}
+  .toc li{margin:.2rem 0}
+  .ftree,.ftree ul{list-style:none;margin:0;padding-left:1.15rem;border-left:1px solid var(--292929)}
+  .ftree,.ftree ul{border-left:1px solid var(--border)}
+  .ftree{padding-left:0;border-left:none}
+  .ftree li{margin:.35rem 0}
+  .ftree .dir>code{font-weight:600}
+  .tag{font-size:.7rem;padding:.05em .5em;border-radius:4px;font-weight:700;letter-spacing:.04em;vertical-align:.12em}
+  .tag.existing{background:#1f3a2e;color:#7ee0b0;border:1px solid #2d6a4f}
+  .tag.new{background:#3a2f1a;color:var(--accent);border:1px solid #6b5a23}
+  .ic{display:inline-block;width:1.1em;height:1.1em;vertical-align:-0.18em;margin-right:.35em;flex:0 0 auto}
+  table{border-collapse:collapse;width:100%;margin:1rem 0;font-size:.92rem}
+  th,td{border:1px solid var(--border);padding:.5rem .7rem;text-align:left;color:var(--muted)}
+  th{background:var(--bg2);color:var(--text)}
+  .phase{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:1rem 1.4rem;margin:1.4rem 0}
+  .phase h3{margin-top:.2rem}
+  .checklist{margin:.4rem 0 .4rem 1.2rem;color:var(--muted)}
+  .checklist li{margin:.3rem 0}
+  .status{color:var(--dim);font-family:ui-monospace,monospace}
+  .loop{background:#1a1a12;border:1px solid #4a4a23;border-radius:8px;padding:.7rem 1rem;margin-top:.8rem;color:var(--accent2);font-size:.92rem}
+  .warn{background:#2a1414;border:1px solid #5a2a2a;border-radius:8px;padding:.7rem 1rem;color:#ffb4b4}
+  kbd{background:#222;border:1px solid var(--border);border-radius:4px;padding:.05em .4em;font-family:ui-monospace,monospace;font-size:.82em}
+</style>
+</head>
+<body>
+
+<!-- ===== INLINE ICON SPRITE (self-contained) ===== -->
+<svg xmlns="http://www.w3.org/2000/svg" width="0" height="0" style="position:absolute;width:0;height:0;overflow:hidden" aria-hidden="true">
+  <symbol id="ic-agent" viewBox="0 0 24 24"><circle cx="12" cy="3" r="1.4" fill="#8B5CF6"/><path d="M12 4.4V7" stroke="#8B5CF6" stroke-width="1.8" stroke-linecap="round"/><rect x="4" y="7" width="16" height="12" rx="4" fill="none" stroke="#8B5CF6" stroke-width="1.8"/><circle cx="9.5" cy="13" r="1.6" fill="#8B5CF6"/><circle cx="14.5" cy="13" r="1.6" fill="#8B5CF6"/></symbol>
+  <symbol id="ic-dbtype" viewBox="0 0 24 24"><path d="M7 4c-2 0-3 1-3 3v2c0 1-.8 2-2 2v2c1.2 0 2 1 2 2v2c0 2 1 3 3 3" fill="none" stroke="#8B5CF6" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M17 4c2 0 3 1 3 3v2c0 1 .8 2 2 2v2c-1.2 0-2 1-2 2v2c0 2-1 3-3 3" fill="none" stroke="#8B5CF6" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><ellipse cx="12" cy="8.5" rx="3.5" ry="1.5" fill="none" stroke="#2DD4BF" stroke-width="1.4"/><path d="M8.5 8.5v6.5c0 0.85 1.55 1.5 3.5 1.5s3.5-.65 3.5-1.5V8.5" fill="none" stroke="#2DD4BF" stroke-width="1.4"/><path d="M8.5 11.75c0 0.85 1.55 1.5 3.5 1.5s3.5-.65 3.5-1.5" fill="none" stroke="#2DD4BF" stroke-width="1.4"/></symbol>
+  <symbol id="ic-file" viewBox="0 0 24 24"><path d="M6 2.5h7.5L19 8v12.5a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-17a1 1 0 0 1 1-1z" fill="#1E2638" stroke="#8A93A6" stroke-width="1.3"/><path d="M13.5 2.5V8H19" fill="none" stroke="#8A93A6" stroke-width="1.3" stroke-linejoin="round"/></symbol>
+  <symbol id="ic-http" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="#2DD4BF" stroke-width="1.7"/><ellipse cx="12" cy="12" rx="3.7" ry="9" fill="none" stroke="#2DD4BF" stroke-width="1.7"/><path d="M3.2 9.2h17.6M3.2 14.8h17.6" stroke="#2DD4BF" stroke-width="1.7" fill="none"/></symbol>
+  <symbol id="ic-typescript" viewBox="0 0 128 128"><path fill="#fff" d="M22.67 47h99.67v73.67H22.67z"/><path fill="#007acc" d="M1.5 63.91v62.5h125v-125H1.5zm100.73-5a15.56 15.56 0 017.82 4.5 20.58 20.58 0 013 4c0 .16-5.4 3.81-8.69 5.85-.12.08-.6-.44-1.13-1.23a7.09 7.09 0 00-5.87-3.53c-3.79-.26-6.23 1.73-6.21 5a4.58 4.58 0 00.54 2.34c.83 1.73 2.38 2.76 7.24 4.86 8.95 3.85 12.78 6.39 15.16 10 2.66 4 3.25 10.46 1.45 15.24-2 5.2-6.9 8.73-13.83 9.9a38.32 38.32 0 01-9.52-.1 23 23 0 01-12.72-6.63c-1.15-1.27-3.39-4.58-3.25-4.82a9.34 9.34 0 011.15-.73L82 101l3.59-2.08.75 1.11a16.78 16.78 0 004.74 4.54c4 2.1 9.46 1.81 12.16-.62a5.43 5.43 0 00.69-6.92c-1-1.39-3-2.56-8.59-5-6.45-2.78-9.23-4.5-11.77-7.24a16.48 16.48 0 01-3.43-6.25 25 25 0 01-.22-8c1.33-6.23 6-10.58 12.82-11.87a31.66 31.66 0 019.49.26zm-29.34 5.24v5.12H56.66v46.23H45.15V69.26H28.88v-5a49.19 49.19 0 01.12-5.17C29.08 59 39 59 51 59h21.83z"/></symbol>
+  <symbol id="ic-json" viewBox="0 0 24 24"><rect width="24" height="24" rx="5" fill="#1E2638"/><text x="12" y="16.6" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="700" fill="#F5A623" text-anchor="middle">{ }</text></symbol>
+  <symbol id="ic-markdown" viewBox="0 0 24 24"><path fill="#9AA4B2" d="M22.27 19.385H1.73A1.73 1.73 0 010 17.655V6.345a1.73 1.73 0 011.73-1.73h20.54A1.73 1.73 0 0124 6.345v11.308a1.73 1.73 0 01-1.73 1.731zM5.769 15.923v-4.5l2.308 2.885 2.307-2.885v4.5h2.308V8.078h-2.308l-2.307 2.885-2.308-2.885H3.46v7.847zM21.232 12h-2.309V8.077h-2.307V12h-2.308l3.461 4.039z"/></symbol>
+</svg>
+
+<main>
+
+<header>
+  <h1>Plan: Self-Compaction Pi Extension</h1>
+  <details class="meta">
+    <summary>Metadata</summary>
+    <dl>
+      <dt>created</dt>      <dd>2026-05-20T00:00:00Z</dd>
+      <dt>modified</dt>     <dd>2026-05-20T00:00:00Z</dd>
+      <dt>commits</dt>      <dd>(none yet)</dd>
+      <dt>agent name</dt>   <dd>glm-5.2 (pi, OpenRouter)</dd>
+      <dt>session id</dt>   <dd>(build session)</dd>
+      <dt>back refs</dt>    <dd>prompts/end_draft_plan.md</dd>
+      <dt>forward refs</dt> <dd>apps/glm-5-2/</dd>
+    </dl>
+  </details>
+</header>
+
+<figure>
+  <svg viewBox="0 0 760 240" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Self-compaction handoff cycle">
+    <rect x="0" y="0" width="760" height="240" fill="#0a0a0c"/>
+    <!-- gauge -->
+    <g transform="translate(40,40)">
+      <text x="0" y="-8" fill="#a0a0a6" font-size="16" font-family="ui-monospace,monospace">context window</text>
+      <rect x="0" y="0" width="680" height="34" rx="6" fill="#1a1a1c" stroke="#27272a"/>
+      <!-- used ~ 40% with half cached -->
+      <rect x="2"  y="2" width="136" height="30" fill="#facc15"/>
+      <rect x="138" y="2" width="136" height="30" fill="#ffd83d" opacity="0.55"/>
+      <text x="138" y="-2" fill="#facc15" font-size="14" font-family="ui-monospace,monospace" text-anchor="middle">~ soft</text>
+      <line x1="272" y1="-6" x2="272" y2="44" stroke="#f87171" stroke-width="2"/>
+      <text x="272" y="58" fill="#f87171" font-size="13" font-family="ui-monospace,monospace" text-anchor="middle">warning</text>
+      <line x1="408" y1="-6" x2="408" y2="44" stroke="#f87171" stroke-width="2" stroke-dasharray="4 3"/>
+      <text x="408" y="58" fill="#f87171" font-size="13" font-family="ui-monospace,monospace" text-anchor="middle">force</text>
+      <text x="688" y="22" fill="#a0a0a6" font-size="13" font-family="ui-monospace,monospace" text-anchor="end">40%</text>
+    </g>
+    <!-- cycle nodes -->
+    <g font-family="ui-monospace,monospace" font-size="15">
+      <rect x="40"  y="130" width="150" height="46" rx="8" fill="#161618" stroke="#facc15"/><text x="115" y="158" fill="#f7f7f2" text-anchor="middle">agent works</text>
+      <rect x="230" y="130" width="150" height="46" rx="8" fill="#161618" stroke="#ffd83d"/><text x="305" y="158" fill="#f7f7f2" text-anchor="middle">self_compact()</text>
+      <rect x="420" y="130" width="150" height="46" rx="8" fill="#161618" stroke="#8B5CF6"/><text x="495" y="158" fill="#f7f7f2" text-anchor="middle">compact (idle)</text>
+      <rect x="610" y="130" width="120" height="46" rx="8" fill="#161618" stroke="#2DD4BF"/><text x="670" y="158" fill="#f7f7f2" text-anchor="middle">resume note</text>
+      <path d="M190 153 L230 153" stroke="#a0a0a6" stroke-width="2" marker-end="url(#a1)"/>
+      <path d="M380 153 L420 153" stroke="#a0a0a6" stroke-width="2" marker-end="url(#a1)"/>
+      <path d="M570 153 L610 153" stroke="#a0a0a6" stroke-width="2" marker-end="url(#a1)"/>
+      <path d="M670 130 C 670 95, 115 95, 115 130" stroke="#a0a0a6" stroke-width="2" fill="none" marker-end="url(#a1)" stroke-dasharray="5 4"/>
+    </g>
+    <defs><marker id="a1" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0 0 L8 3 L0 6 z" fill="#a0a0a6"/></marker></defs>
+  </svg>
+  <figcaption>Self-compaction handoff: the agent hands off a note, compacts once idle, then resumes the note verbatim with tools restored.</figcaption>
+</figure>
+
+<nav id="toc" class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#purpose">Purpose</a></li>
+    <li><a href="#problem">Problem</a></li>
+    <li><a href="#solution">Solution</a></li>
+    <li><a href="#files">Relevant Files</a></li>
+    <li><a href="#phases">Implementation Phases</a>
+      <ol>
+        <li><a href="#phase-summary">Phase Summary</a></li>
+        <li><a href="#phase-1">Phase 1: Skeleton, flags &amp; thresholds</a></li>
+        <li><a href="#phase-2">Phase 2: self_compact handoff tool &amp; tool locking</a></li>
+        <li><a href="#phase-3">Phase 3: Compaction prompt override &amp; resume</a></li>
+        <li><a href="#phase-4">Phase 4: Context-bar footer</a></li>
+        <li><a href="#phase-5">Phase 5: HIL slash commands</a></li>
+        <li><a href="#phase-6">Phase 6: Prompt-engineering files</a></li>
+        <li><a href="#phase-7">Phase 7: Verification harness</a></li>
+      </ol>
+    </li>
+    <li><a href="#validation">Validation Commands</a></li>
+    <li><a href="#notes">Notes</a></li>
+    <li><a href="#amendments">Amendments</a></li>
+  </ol>
+</nav>
+
+<section id="purpose">
+  <h2>Purpose</h2>
+  <p>Build a standalone pi coding-agent extension that lets a long-running autonomous agent compact itself on its own terms: a <code>self_compact</code> handoff tool, three context-threshold levels (soft / warning / forced) with CLI flags, a context-bar UI, editable prompt files for each interaction, and human-in-the-loop slash commands. The extension lives entirely under <code>apps/glm-5-2/</code> and depends on no other extension.</p>
+</section>
+
+<section id="problem">
+  <h2>Problem</h2>
+  <p>Long-running autonomous agents exhaust their context window. A full window means context rot (degraded reasoning) and wasted spend on state-of-the-art models. Pi's built-in auto-compaction triggers late and summarizes mechanically; there is no way for the agent to voluntarily hand off a "note to self" and resume the exact next action after compaction, and no graduated warning UI before the hard cutoff.</p>
+  <figure>
+    <svg viewBox="0 0 760 200" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="context rot curve">
+      <rect x="0" y="0" width="760" height="200" fill="#0a0a0c"/>
+      <path d="M40 160 C 200 158, 320 150, 420 120 S 620 40, 720 30" fill="none" stroke="#f87171" stroke-width="3"/>
+      <path d="M40 168 C 240 168, 360 168, 460 168 S 660 168, 720 168" fill="none" stroke="#a0a0a6" stroke-width="2" stroke-dasharray="4 4"/>
+      <text x="40" y="185" fill="#a0a0a6" font-size="14" font-family="ui-monospace,monospace">tokens used</text>
+      <text x="720" y="22" fill="#f87171" font-size="14" font-family="ui-monospace,monospace" text-anchor="end">quality collapses near window limit</text>
+      <line x1="300" y1="20" x2="300" y2="170" stroke="#facc15" stroke-width="2" stroke-dasharray="5 4"/>
+      <text x="300" y="16" fill="#facc15" font-size="13" font-family="ui-monospace,monospace" text-anchor="middle">compact here, not at the wall</text>
+    </svg>
+    <figcaption>Without a graduated handoff, the agent only compacts at the hard wall, after quality has already rotted.</figcaption>
+  </figure>
+</section>
+
+<section id="solution">
+  <h2>Solution</h2>
+  <p>A single extension, <code><svg class="ic"><use href="#ic-typescript"/></svg>self-compact.ts</code>, plus three editable prompt markdown files under <code><svg class="ic"><use href="#ic-file"/></svg>.pi/self-compact/</code>. The extension registers four CLI flags, one handoff tool, three slash commands, a custom footer (context bar), and a <code>session_before_compact</code> hook that replaces pi's default summarization prompt with the user's compaction-message file (or the <code>--compact-prompt</code> override). The handoff tool saves a validated note, locks all other tools, ends the run, compacts once idle, then restores tools and resumes the note verbatim with no human message.</p>
+  <figure>
+    <svg viewBox="0 0 760 300" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="state machine">
+      <rect x="0" y="0" width="760" height="300" fill="#0a0a0c"/>
+      <g font-family="ui-monospace,monospace" font-size="15" fill="#f7f7f2">
+        <g><rect x="30"  y="30"  width="130" height="44" rx="8" fill="#161618" stroke="#a0a0a6"/><text x="95"  y="57"  text-anchor="middle">normal</text></g>
+        <g><rect x="210" y="30"  width="130" height="44" rx="8" fill="#161618" stroke="#facc15"/><text x="275" y="57"  text-anchor="middle">soft</text></g>
+        <g><rect x="390" y="30"  width="140" height="44" rx="8" fill="#161618" stroke="#ffd83d"/><text x="460" y="57"  text-anchor="middle">warning</text></g>
+        <g><rect x="580" y="30"  width="150" height="44" rx="8" fill="#161618" stroke="#f87171"/><text x="655" y="57"  text-anchor="middle">locked (force)</text></g>
+
+        <g><rect x="30"  y="130" width="170" height="44" rx="8" fill="#161618" stroke="#8B5CF6"/><text x="115" y="157" text-anchor="middle">handoff saved</text></g>
+        <g><rect x="250" y="130" width="150" height="44" rx="8" fill="#161618" stroke="#8B5CF6"/><text x="325" y="157" text-anchor="middle">compacting</text></g>
+        <g><rect x="450" y="130" width="150" height="44" rx="8" fill="#161618" stroke="#f87171"/><text x="525" y="157" text-anchor="middle">failed (retry)</text></g>
+        <g><rect x="650" y="130" width="90"  height="44" rx="8" fill="#161618" stroke="#2DD4BF"/><text x="695" y="157" text-anchor="middle">resumed</text></g>
+
+        <g font-size="12" fill="#a0a0a6">
+          <path d="M160 52 H210"  stroke="#a0a0a6" stroke-width="1.6" marker-end="url(#m)"/>
+          <path d="M340 52 H390"  stroke="#a0a0a6" stroke-width="1.6" marker-end="url(#m)"/>
+          <path d="M530 52 H580"  stroke="#a0a0a6" stroke-width="1.6" marker-end="url(#m)"/>
+          <text x="185" y="46" text-anchor="middle">soft%</text>
+          <text x="365" y="46" text-anchor="middle">warn%</text>
+          <text x="555" y="46" text-anchor="middle">force%</text>
+          <path d="M655 74 C 655 110, 115 110, 115 130" stroke="#a0a0a6" stroke-width="1.6" fill="none" marker-end="url(#m)" stroke-dasharray="4 3"/>
+          <text x="380" y="106" text-anchor="middle">self_compact()</text>
+          <path d="M200 152 H250" stroke="#a0a0a6" stroke-width="1.6" marker-end="url(#m)"/>
+          <path d="M400 152 H450" stroke="#a0a0a6" stroke-width="1.6" marker-end="url(#m)"/>
+          <text x="425" y="146" text-anchor="middle">fail</text>
+          <path d="M525 130 C 525 110, 325 110, 325 130" stroke="#a0a0a6" stroke-width="1.6" fill="none" marker-end="url(#m)"/>
+          <text x="425" y="106" text-anchor="middle">retry / reload</text>
+          <path d="M600 152 H650" stroke="#2DD4BF" stroke-width="1.8" marker-end="url(#g)"/>
+          <text x="625" y="146" text-anchor="middle" fill="#2DD4BF">ok</text>
+          <path d="M695 174 C 695 230, 95 230, 95 74" stroke="#2DD4BF" stroke-width="1.6" fill="none" marker-end="url(#g)" stroke-dasharray="4 3"/>
+          <text x="395" y="222" text-anchor="middle" fill="#2DD4BF">restore tools, return note verbatim</text>
+        </g>
+      </g>
+      <defs><marker id="m" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0 0 L7 3 L0 6 z" fill="#a0a0a6"/></marker><marker id="g" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0 0 L7 3 L0 6 z" fill="#2DD4BF"/></marker></defs>
+    </svg>
+    <figcaption>State machine. Threshold transitions drive soft &rarr; warning &rarr; locked. The handoff (self_compact) moves to compacting, then resumed on success or back to compacting on failure/reload.</figcaption>
+  </figure>
+</section>
+
+<section id="files" class="files">
+  <h2>Relevant Files</h2>
+
+  <h3>Existing Files (read-only references, not edited)</h3>
+  <ul class="ftree">
+    <li class="dir"><code>ai_docs/</code>
+      <ul>
+        <li><span class="tag existing">existing</span> <code><svg class="ic"><use href="#ic-markdown"/></svg> pi-compaction.md</code> — <code>session_before_compact</code>, <code>CompactionPreparation</code>, <code>serializeConversation</code>, <code>CompactionResult</code> shape</li>
+        <li><span class="tag existing">existing</span> <code><svg class="ic"><use href="#ic-markdown"/></svg> pi-extensions.md</code> — <code>registerFlag/getFlag</code>, <code>registerTool</code>, <code>setActiveTools</code>, <code>setFooter</code>, <code>sendUserMessage</code>, <code>compact</code></li>
+        <li><span class="tag existing">existing</span> <code><svg class="ic"><use href="#ic-markdown"/></svg> example-extension-custom-compaction.md</code> — pattern for own-model summarization in <code>session_before_compact</code></li>
+        <li><span class="tag existing">existing</span> <code><svg class="ic"><use href="#ic-markdown"/></svg> example-extension-trigger-compact.md</code> — <code>ctx.compact()</code> + <code>getContextUsage()</code> threshold pattern</li>
+        <li><span class="tag existing">existing</span> <code><svg class="ic"><use href="#ic-markdown"/></svg> example-extension-custom-footer.md</code> — <code>ctx.ui.setFooter()</code> + <code>footerData.onBranchChange</code></li>
+      </ul>
+    </li>
+    <li class="dir"><code>node_modules/@earendil-works/pi-coding-agent/dist/</code>
+      <ul>
+        <li><span class="tag existing">existing</span> <code><svg class="ic"><use href="#ic-typescript"/></svg> core/extensions/types.d.ts</code> — <code>ContextUsage</code>, <code>ToolDefinition</code>, <code>ExtensionFlag</code>, <code>SessionBeforeCompactEvent/Result</code>, <code>TurnEndEvent</code></li>
+        <li><span class="tag existing">existing</span> <code><svg class="ic"><use href="#ic-typescript"/></svg> core/compaction/compaction.d.ts</code> — <code>CompactionPreparation</code>, <code>CompactionResult</code></li>
+      </ul>
+    </li>
+  </ul>
+
+  <h3>New Files</h3>
+  <ul class="ftree">
+    <li class="dir"><code>apps/glm-5-2/extensions/self-compact/</code>
+      <ul>
+        <li><span class="tag new">new</span> <code><svg class="ic"><use href="#ic-typescript"/></svg> self-compact.ts</code> — main extension (default export). Flags, tool, commands, footer, compaction hook, threshold state machine</li>
+        <li><span class="tag new">new</span> <code><svg class="ic"><use href="#ic-typescript"/></svg> thresholds.ts</code> — pure: <code>parseTokenSpec</code>, <code>resolveThresholds</code>, <code>renderContextBar</code></li>
+        <li><span class="tag new">new</span> <code><svg class="ic"><use href="#ic-typescript"/></svg> prompts.ts</code> — pure: load + interpolate the three prompt files with live usage values</li>
+        <li><span class="tag new">new</span> <code><svg class="ic"><use href="#ic-typescript"/></svg> state.ts</code> — pure: handoff state read/write to <code>.pi/self-compact/handoff.json</code> (reload recovery)</li>
+      </ul>
+    </li>
+    <li class="dir"><code>apps/glm-5-2/.pi/self-compact/</code>
+      <ul>
+        <li><span class="tag new">new</span> <code><svg class="ic"><use href="#ic-markdown"/></svg> USER_PROMPT_SOFT_SELF_COMPACT.md</code> — optional heads-up guidance (runs from <code>--compact-soft-at</code>)</li>
+        <li><span class="tag new">new</span> <code><svg class="ic"><use href="#ic-markdown"/></svg> USER_PROMPT_WARNING_SELF_COMPACT.md</code> — stern "compact soon, hard cutoff at …" (runs from <code>--compact-at</code>)</li>
+        <li><span class="tag new">new</span> <code><svg class="ic"><use href="#ic-markdown"/></svg> USER_PROMPT_COMPACTION_MESSAGE.md</code> — replaces pi's default compaction prompt; overridden by <code>--compact-prompt</code></li>
+      </ul>
+    </li>
+    <li class="dir"><code>apps/glm-5-2/verify/</code>
+      <ul>
+        <li><span class="tag new">new</span> <code><svg class="ic"><use href="#ic-typescript"/></svg> thresholds.test.ts</code> — unit tests for parsing + bar rendering (run via jiti)</li>
+        <li><span class="tag new">new</span> <code><svg class="ic"><use href="#ic-markdown"/></svg> VERIFY.md</code> — verification results ledger</li>
+      </ul>
+    </li>
+    <li class="dir"><code>apps/glm-5-2/</code>
+      <ul>
+        <li><span class="tag new">new</span> <code><svg class="ic"><use href="#ic-file"/></svg> result.txt</code> — written by the agent during the end-to-end handoff verification run</li>
+      </ul>
+    </li>
+  </ul>
+</section>
+
+<section id="phases">
+  <h2>Implementation Phases</h2>
+  <p><strong>IMPORTANT:</strong> Execute every phase and task step by step, in order, top to bottom.</p>
+  <p>Status markers: <code>[]</code> idle &middot; <code>[wip]</code> in progress &middot; <code>[x]</code> complete &middot; <code>[f]</code> failed. Check off work at BOTH levels: each task box and the phase header only when all its boxes are done.</p>
+
+  <h3 id="phase-summary">Phase Summary</h3>
+  <table class="phase-summary">
+    <thead><tr><th>Phase</th><th>Purpose</th><th>Done when</th></tr></thead>
+    <tbody>
+      <tr><td><a href="#phase-1">1. Skeleton, flags &amp; thresholds</a></td><td>Wire the extension, register four flags, parse/resolve thresholds, persist state</td><td><code>pi -e ... --help</code> lists the four flags; thresholds parse k/m/% and cap at 90%</td></tr>
+      <tr><td><a href="#phase-2">2. self_compact handoff tool &amp; locking</a></td><td>Register the <code>self_compact</code> tool: validate note, save, lock tools, end run</td><td>Tool rejects blank/&gt;24k, saves valid notes, locks other tools, terminates the turn</td></tr>
+      <tr><td><a href="#phase-3">3. Compaction prompt override &amp; resume</a></td><td>Hook <code>session_before_compact</code> with override prompt; resume note verbatim after success; preserve note on failure</td><td>Override prompt used; note returned verbatim; tools restored; failure keeps note + lock</td></tr>
+      <tr><td><a href="#phase-4">4. Context-bar footer</a></td><td>Render the 20-cell usage bar with cached/uncached/free + ~ ! | markers</td><td>Bar matches the spec examples (40% / 20&middot;50&middot;60, 10&middot;20&middot;25 on 1M, zero-buffer overlap)</td></tr>
+      <tr><td><a href="#phase-5">5. HIL slash commands</a></td><td><code>/self-compact-info</code> (no turn), <code>/self-compact-now</code> (retry uses saved note); leave built-in <code>/compact</code> alone</td><td>Commands registered and behave per spec; <code>/compact</code> still uses override prompt</td></tr>
+      <tr><td><a href="#phase-6">6. Prompt-engineering files</a></td><td>Author the three markdown prompt files in <code>.pi/self-compact/</code> with live-usage placeholders</td><td>Files exist at the exact required paths and are loaded by the extension</td></tr>
+      <tr><td><a href="#phase-7">7. Verification harness</a></td><td>Unit-test pure helpers; load-test the extension; document end-to-end launch results</td><td>Helper tests pass; <code>--help</code> loads; VERIFY.md records results and blockers</td></tr>
+    </tbody>
+  </table>
+
+  <div class="phase" id="phase-1">
+    <h3><code class="status">[]</code> Phase 1: Skeleton, flags &amp; thresholds</h3>
+    <p>Create the extension entry, register four string CLI flags, and implement pure threshold parsing/resolution. Thresholds accept whole token counts, <code>k</code>/<code>m</code> suffixes, or <code>%</code>; the hard limit (warning + buffer) is capped at 90% of the context window and invalid specs are rejected. Defaults: soft 225k, warning 250k, buffer 20k (force 270k).</p>
+    <h4>1.1 Entry &amp; flags</h4>
+    <ul class="checklist">
+      <li><code class="status">[]</code> Create <code>extensions/self-compact/self-compact.ts</code> with <code>export default function (pi: ExtensionAPI)</code> and the four <code>pi.registerFlag</code> calls: <code>compact-soft-at</code> ("225k"), <code>compact-at</code> ("250k"), <code>compact-buffer</code> ("20k"), <code>compact-prompt</code> ("").</li>
+      <li><code class="status">[]</code> Capture <code>pi.getFlag</code> values once at session start (after CLI values are applied) into a resolved config object.</li>
+    </ul>
+    <h4>1.2 Pure threshold helpers (<code>thresholds.ts</code>)</h4>
+    <ul class="checklist">
+      <li><code class="status">[]</code> <code>parseTokenSpec(spec: string): {tokens?: number, percent?: number} | null</code> — parse <code>"225k"</code>, <code>"20%"</code>, <code>"100000"</code>, <code>"1m"</code>, <code>"0"</code>; reject garbage.</li>
+      <li><code class="status">[]</code> <code>resolveThresholds(flags, contextWindow): {soft, warning, force, bufferPct} | {error}</code> — convert each spec to tokens (percent &times; window), compute <code>force = warning + buffer</code>, cap force at 90% of window, reject if soft &gt; warning or warning &gt; force or invalid.</li>
+      <li><code class="status">[]</code> Return both token counts and percent-of-window for each threshold (used by the bar markers).</li>
+    </ul>
+    <h4>1.3 Handoff state (<code>state.ts</code>)</h4>
+    <ul class="checklist">
+      <li><code class="status">[]</code> <code>readHandoff(dir)</code>/<code>writeHandoff(dir, state)</code> for <code>.pi/self-compact/handoff.json</code> holding <code>{note, state, savedTools, cycleCount, error}</code>.</li>
+      <li><code class="status">[]</code> On <code>session_start</code>, read handoff; if a pending note exists and state is <code>compacting</code>/<code>locked</code>, restore locked tools and re-arm compaction for when the agent goes idle (reload recovery).</li>
+    </ul>
+    <h4>1.4 Testing Strategy</h4>
+    <p>Run the helper unit tests via jiti and load the extension with <code>pi --help</code> to confirm flags register.</p>
+    <ul class="checklist">
+      <li><code class="status">[]</code> <code>node --import jiti/register verify/thresholds.test.ts</code> — parsing + resolution cases pass</li>
+      <li><code class="status">[]</code> <code>pi -e apps/glm-5-2/extensions/self-compact/self-compact.ts --help</code> — lists the four extension flags without error</li>
+    </ul>
+    <div class="loop">🔁 Do not exit this phase until every box above is checked.</div>
+  </div>
+
+  <div class="phase" id="phase-2">
+    <h3><code class="status">[]</code> Phase 2: self_compact handoff tool &amp; tool locking</h3>
+    <p>Register the <code>self_compact</code> tool. It validates the note (non-blank, &le; 24,000 chars), saves it, locks every other tool, and ends the current run cleanly via <code>terminate: true</code>.</p>
+    <h4>2.1 Tool registration</h4>
+    <ul class="checklist">
+      <li><code class="status">[]</code> <code>pi.registerTool</code> with <code>name:"self_compact"</code>, a TypeBox schema <code>{note_to_self: Type.String()}</code>, and <code>promptSnippet</code>/<code>promptGuidelines</code> instructing the agent to write a handoff note then call it.</li>
+      <li><code class="status">[]</code> <code>execute</code> rejects blank notes (trim empty) with a clear error content block.</li>
+      <li><code class="status">[]</code> <code>execute</code> rejects notes over 24,000 characters with a clear error content block.</li>
+    </ul>
+    <h4>2.2 Save, lock, terminate</h4>
+    <ul class="checklist">
+      <li><code class="status">[]</code> On valid note: snapshot current <code>pi.getActiveTools()</code> into <code>savedTools</code>, persist the note + <code>state:"compacting"</code> via <code>writeHandoff</code> and <code>pi.appendEntry("self-compact-handoff", {note})</code>.</li>
+      <li><code class="status">[]</code> <code>pi.setActiveTools(["self_compact"])</code> to lock all other tools until compaction succeeds.</li>
+      <li><code class="status">[]</code> Return <code>{content:[{type:"text",text:"Note saved. Compacting once idle…"}], terminate:true}</code> to end the run cleanly.</li>
+    </ul>
+    <h4>2.3 Threshold-driven locking</h4>
+    <ul class="checklist">
+      <li><code class="status">[]</code> On <code>turn_end</code>, compute usage; if percent &ge; force threshold and state is <code>normal</code>/<code>warning</code>, call <code>setActiveTools(["self_compact"])</code> and set <code>state:"locked"</code> (other tools blocked).</li>
+    </ul>
+    <h4>2.4 Testing Strategy</h4>
+    <ul class="checklist">
+      <li><code class="status">[]</code> <code>pi -e ... --help</code> still loads (tool registration does not throw)</li>
+      <li><code class="status">[]</code> Code review: blank/&gt;24k rejection paths and <code>terminate:true</code> present</li>
+    </ul>
+    <div class="loop">🔁 Do not exit this phase until every box above is checked.</div>
+  </div>
+
+  <div class="phase" id="phase-3">
+    <h3><code class="status">[]</code> Phase 3: Compaction prompt override &amp; resume</h3>
+    <p>Drive compaction once idle, replace pi's default summarization prompt with the user's file (or <code>--compact-prompt</code>), return the note verbatim after success, restore tools, and preserve the note + lock on failure.</p>
+    <h4>3.1 Trigger compaction when idle</h4>
+    <ul class="checklist">
+      <li><code class="status">[]</code> On <code>turn_end</code> where a pending note exists and <code>ctx.isIdle()</code>, call <code>ctx.compact({ onComplete, onError })</code>.</li>
+    </ul>
+    <h4>3.2 Override the summarization prompt (<code>session_before_compact</code>)</h4>
+    <ul class="checklist">
+      <li><code class="status">[]</code> Resolve the override prompt: <code>--compact-prompt</code> value if non-empty, else the contents of <code>USER_PROMPT_COMPACTION_MESSAGE.md</code>.</li>
+      <li><code class="status">[]</code> When an override exists: serialize <code>messagesToSummarize + turnPrefixMessages</code> via <code>serializeConversation(convertToLlm(...))</code>, build a single user turn that contains the override prompt + the conversation + the pending note labelled "next action to preserve", call <code>ctx.modelRegistry.complete(ctx.model, ...)</code> with <code>cacheRetention:"none"</code> and the event <code>signal</code>, and return <code>{compaction:{summary, firstKeptEntryId, tokensBefore, usage, details:{note}}}</code>.</li>
+      <li><code class="status">[]</code> If the model is missing or the call fails, return <code>{cancel:true}</code> so compaction aborts and <code>session_compact_failed</code> fires (note preserved, tools stay locked).</li>
+      <li><code class="status">[]</code> If no override prompt exists at all, return <code>undefined</code> to let pi use its default compaction.</li>
+    </ul>
+    <h4>3.3 Resume after success</h4>
+    <ul class="checklist">
+      <li><code class="status">[]</code> On <code>session_compact</code> success: restore <code>pi.setActiveTools(savedTools)</code>, set <code>state:"normal"</code>, increment <code>cycleCount</code>, clear the persisted note, and call <code>pi.sendUserMessage(note)</code> to return the note verbatim and continue without a human message.</li>
+    </ul>
+    <h4>3.4 Preserve on failure</h4>
+    <ul class="checklist">
+      <li><code class="status">[]</code> On <code>session_compact_failed</code>: keep the pending note, keep tools locked (<code>setActiveTools(["self_compact"])</code>), record <code>error</code>, notify the user. Reload recovery (Phase 1.3) re-arms compaction from the saved note.</li>
+    </ul>
+    <h4>3.5 Testing Strategy</h4>
+    <ul class="checklist">
+      <li><code class="status">[]</code> <code>pi -e ... --help</code> loads with the hook registered</li>
+      <li><code class="status">[]</code> Code review: override-precedence, cancel-on-failure, resume-sends-note-verbatim, restore-tools paths all present</li>
+    </ul>
+    <div class="loop">🔁 Do not exit this phase until every box above is checked.</div>
+  </div>
+
+  <div class="phase" id="phase-4">
+    <h3><code class="status">[]</code> Phase 4: Context-bar footer</h3>
+    <p>Render a 20-cell usage bar (5% each): cached <code>#</code>, uncached <code>=</code>, free <code>-</code>, with visible <code>~</code> (soft), <code>!</code> (warning), <code>|</code> (force) markers overlaid at their cells, followed by the used percent.</p>
+    <h4>4.1 Pure bar renderer (<code>thresholds.ts</code>)</h4>
+    <ul class="checklist">
+      <li><code class="status">[]</code> <code>renderContextBar({usedTokens, cachedTokens, contextWindow, softPct, warnPct, forcePct}): string</code> — 20 cells; cached cells first (<code>#</code>), then uncached (<code>=</code>), then free (<code>-</code>); overlay <code>~</code>/<code>!</code>/<code>|</code> at <code>round(pct*20)</code> (clamped 0..19); append <code>NN%</code>.</li>
+      <li><code class="status">[]</code> When <code>buffer == 0</code>, <code>forcePct == warnPct</code> so <code>|</code> and <code>!</code> occupy the same cell and <code>|</code> wins (overlap rule).</li>
+    </ul>
+    <h4>4.2 Footer wiring</h4>
+    <ul class="checklist">
+      <li><code class="status">[]</code> On <code>session_start</code> in <code>tui</code> mode, <code>ctx.ui.setFooter(factory)</code>. The factory captures <code>ctx</code> and renders <code>[bar] NN%</code> using <code>ctx.getContextUsage()</code> and the last assistant <code>usage.cacheRead</code> from <code>ctx.sessionManager.getBranch()</code>.</li>
+      <li><code class="status">[]</code> Subscribe to <code>footerData.onBranchChange</code> for re-render and call <code>tui.requestRender()</code> from <code>turn_end</code>/<code>message_end</code> so the bar updates live.</li>
+    </ul>
+    <h4>4.3 Testing Strategy</h4>
+    <ul class="checklist">
+      <li><code class="status">[]</code> Unit: 40% used, half cached, thresholds 20/50/60 &rarr; <code>[###~====-!-|--------] 40%</code></li>
+      <li><code class="status">[]</code> Unit: 1,000,000-token window, thresholds 100k/200k/250k &rarr; markers at 10/20/25%</li>
+      <li><code class="status">[]</code> Unit: <code>--compact-buffer 0</code> &rarr; <code>|</code> shown where warning and force overlap</li>
+    </ul>
+    <div class="loop">🔁 Do not exit this phase until every box above is checked.</div>
+  </div>
+
+  <div class="phase" id="phase-5">
+    <h3><code class="status">[]</code> Phase 5: HIL slash commands</h3>
+    <p>Register the two required commands and leave the built-in <code>/compact</code> untouched (it still flows through our <code>session_before_compact</code> override).</p>
+    <h4>5.1 /self-compact-info</h4>
+    <ul class="checklist">
+      <li><code class="status">[]</code> Register <code>/self-compact-info</code> that prints (via <code>ctx.ui.notify</code>, no LLM turn): resolved thresholds (tokens + %), current usage, state, cycle count, prompt-source details, and any pending note or error.</li>
+    </ul>
+    <h4>5.2 /self-compact-now</h4>
+    <ul class="checklist">
+      <li><code class="status">[]</code> Register <code>/self-compact-now</code> that asks the agent to write a note and call <code>self_compact</code> via <code>pi.sendUserMessage</code>.</li>
+      <li><code class="status">[]</code> On retry (a pending note already exists), include the saved note in the message so the agent retries with it rather than inventing a new one or bypassing the tool.</li>
+    </ul>
+    <h4>5.3 Built-in /compact</h4>
+    <ul class="checklist">
+      <li><code class="status">[]</code> Do NOT register <code>/compact</code>; confirm built-in still works and honors the override prompt through the Phase 3 hook.</li>
+    </ul>
+    <h4>5.4 Testing Strategy</h4>
+    <ul class="checklist">
+      <li><code class="status">[]</code> <code>pi -e ... --help</code> lists <code>/self-compact-info</code> and <code>/self-compact-now</code>; no duplicate <code>/compact</code> registration error</li>
+    </ul>
+    <div class="loop">🔁 Do not exit this phase until every box above is checked.</div>
+  </div>
+
+  <div class="phase" id="phase-6">
+    <h3><code class="status">[]</code> Phase 6: Prompt-engineering files</h3>
+    <p>Author the three markdown files at the exact required paths under <code>.pi/self-compact/</code>, each with live-usage placeholders the extension interpolates.</p>
+    <h4>6.1 Soft prompt</h4>
+    <ul class="checklist">
+      <li><code class="status">[]</code> <code>USER_PROMPT_SOFT_SELF_COMPACT.md</code> — optional, friendly heads-up with <code>{{usedPct}}/{{softPct}}/{{tokens}}</code> placeholders; tools remain available.</li>
+    </ul>
+    <h4>6.2 Warning prompt</h4>
+    <ul class="checklist">
+      <li><code class="status">[]</code> <code>USER_PROMPT_WARNING_SELF_COMPACT.md</code> — stern "time to compact soon, hard cutoff at <code>{{forcePct}}</code>"; asks the agent to write a note and call <code>self_compact</code>.</li>
+    </ul>
+    <h4>6.3 Compaction message</h4>
+    <ul class="checklist">
+      <li><code class="status">[]</code> <code>USER_PROMPT_COMPACTION_MESSAGE.md</code> — the summarization system prompt that replaces pi's default; overridden by <code>--compact-prompt</code>.</li>
+    </ul>
+    <h4>6.4 Interpolation (<code>prompts.ts</code>)</h4>
+    <ul class="checklist">
+      <li><code class="status">[]</code> <code>loadPrompt(dir, name, vars)</code> reads the file (relative to the extension's <code>.pi/self-compact/</code>) and substitutes <code>{{key}}</code> placeholders with live values; returns <code>""</code> if the file is missing.</li>
+    </ul>
+    <h4>6.5 Testing Strategy</h4>
+    <ul class="checklist">
+      <li><code class="status">[]</code> Files exist at the three exact paths; <code>ls apps/glm-5-2/.pi/self-compact/</code> shows all three</li>
+      <li><code class="status">[]</code> Unit: <code>loadPrompt</code> substitutes placeholders and returns "" for a missing file</li>
+    </ul>
+    <div class="loop">🔁 Do not exit this phase until every box above is checked.</div>
+  </div>
+
+  <div class="phase" id="phase-7">
+    <h3><code class="status">[]</code> Phase 7: Verification harness</h3>
+    <p>Run all automated checks, record the end-to-end launch results, and write the verification ledger. Where a full live agent run is not possible headless, document the exact command and expected result.</p>
+    <h4>7.1 Automated checks</h4>
+    <ul class="checklist">
+      <li><code class="status">[]</code> <code>node --import jiti/register verify/thresholds.test.ts</code> — all pure-helper assertions pass</li>
+      <li><code class="status">[]</code> <code>pi -e .../self-compact.ts --help</code> — extension loads, four flags listed</li>
+      <li><code class="status">[]</code> <code>pi -e ... --compact-soft-at 20% --compact-at 50% --compact-buffer 0 --compact-prompt "..." --help</code> — flags parse without error</li>
+    </ul>
+    <h4>7.2 End-to-end (documented / attempted)</h4>
+    <ul class="checklist">
+      <li><code class="status">[]</code> Default launch: <code>pi -e .../self-compact.ts</code> — thresholds 225k/250k/270k</li>
+      <li><code class="status">[]</code> Token launch on a 1M model: <code>--compact-soft-at 100k --compact-at 200k --compact-buffer 50k</code> — soft 100k, warning 200k, force 250k</li>
+      <li><code class="status">[]</code> Handoff task: a prompt whose saved next action writes <code>result.txt</code> containing <code>done</code>; verify that exact file after continuation; a completed task does not restart</li>
+    </ul>
+    <h4>7.3 Ledger</h4>
+    <ul class="checklist">
+      <li><code class="status">[]</code> Write <code>verify/VERIFY.md</code> with pass/fail per DoD bullet and any remaining blockers</li>
+    </ul>
+    <div class="loop">🔁 Do not exit this phase until every box above is checked.</div>
+  </div>
+</section>
+
+<section id="validation">
+  <h2>Validation Commands</h2>
+  <p>Run from <code>apps/glm-5-2</code>:</p>
+  <ul class="checklist">
+    <li><code class="status">[]</code> <code>node --import jiti/register verify/thresholds.test.ts</code> — pure helpers (parse, resolve, bar) pass</li>
+    <li><code class="status">[]</code> <code>pi -e ./extensions/self-compact/self-compact.ts --help</code> — extension loads; four flags listed</li>
+    <li><code class="status">[]</code> <code>pi -e ./extensions/self-compact/self-compact.ts --compact-soft-at 20% --compact-at 50% --compact-buffer 0 --compact-prompt "Summarize goal, done work, paths, results, next action. Do not invent work." --help</code> — flag values parse</li>
+    <li><code class="status">[]</code> <code>ls .pi/self-compact/</code> — three prompt files present</li>
+    <li><code class="status">[]</code> <code>test -f result.txt &amp;&amp; cat result.txt</code> — end-to-end handoff produced <code>done</code> (or documented blocker)</li>
+  </ul>
+  <div class="loop">🔁 The plan is not complete until every box is checked and every command passes. If a step is not possible to complete headless, mark it [f] and document the exact command + expected result in VERIFY.md.</div>
+</section>
+
+<section id="notes">
+  <h2>Notes</h2>
+  <h3>Key API decisions</h3>
+  <ul>
+    <li><strong>Flags</strong>: <code>pi.registerFlag(name,{type:"string",...})</code> + <code>pi.getFlag(name)</code>. Unknown CLI flags land in <code>Args.unknownFlags</code> keyed by the flag name (e.g. <code>--compact-soft-at 20%</code> &rarr; <code>"compact-soft-at"=&gt;"20%"</code>), then override the registered default.</li>
+    <li><strong>Tool blocking</strong>: <code>pi.setActiveTools(["self_compact"])</code> is the lock; restoring <code>pi.setActiveTools(savedTools)</code> unlocks. Snapshot <code>savedTools</code> before locking.</li>
+    <li><strong>End the run</strong>: the tool returns <code>terminate:true</code> so pi does not bill another LLM turn after the handoff.</li>
+    <li><strong>Compaction once idle</strong>: trigger <code>ctx.compact()</code> from <code>turn_end</code> only when <code>ctx.isIdle()</code> and a note is pending.</li>
+    <li><strong>Override the summary prompt</strong>: <code>session_before_compact</code> returning a full <code>CompactionResult</code> replaces pi's default summarization; <code>customInstructions</code> alone would only append, so we generate the summary ourselves (pattern from <code>example-extension-custom-compaction.md</code>).</li>
+    <li><strong>Resume</strong>: <code>pi.sendUserMessage(note)</code> returns the note verbatim and starts a continuation turn with no human message.</li>
+    <li><strong>Cached portion</strong>: <code>ContextUsage</code> has only <code>tokens</code>; the cached share comes from the last assistant message's <code>usage.cacheRead</code> (read from <code>ctx.sessionManager.getBranch()</code>).</li>
+    <li><strong>Built-in <code>/compact</code></strong>: left alone; it still routes through our <code>session_before_compact</code> override so the configured summary prompt applies.</li>
+  </ul>
+  <h3>Risks / tradeoffs</h3>
+  <ul>
+    <li>Custom summarization needs the active model + API key at compact time. On failure we <code>cancel</code> and keep the note locked so the user can retry via <code>/self-compact-now</code> or a reload.</li>
+    <li>Sending the soft/warning prompts as user messages starts a turn; the state machine sends each at most once per threshold crossing to avoid loops, resetting to <code>normal</code> after a successful compaction.</li>
+    <li><code>appendEntry("self-compact-handoff", {note})</code> plus a <code>handoff.json</code> file gives both session-durable and reload-durable recovery.</li>
+  </ul>
+</section>
+
+<section id="amendments">
+  <h2>Amendments</h2>
+  <p><em>None yet. Append-only; populated during build.</em></p>
+</section>
+
+</main>
+</body>
+</html>

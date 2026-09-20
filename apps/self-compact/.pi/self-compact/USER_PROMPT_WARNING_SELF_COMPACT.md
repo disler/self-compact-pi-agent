@@ -1,0 +1,3 @@
+[self-compact · WARNING] Context usage is {{used_tokens}} tokens ({{used_percent}}) of {{context_window}}, past the warning threshold of {{warning_tokens}} ({{warning_percent}}). Time to compact soon. Hard cutoff at {{forced_tokens}} ({{forced_percent}}): {{remaining_to_forced}} tokens left before every tool except `self_compact` is blocked.
+
+Finish only the current atomic step, then write your `note_to_self` (max {{note_max_chars}} chars: goal, DONE with exact paths and commands, IN PROGRESS, key decisions, verified test results, exact NEXT ACTION last) and call `self_compact` as your only tool call. Do not list finished work as pending.

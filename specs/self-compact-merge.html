@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Plan: Self-Compact Merge (fab-sc + astra-sc)</title>
+<style>
+:root{
+  --bg:#0a0a0c; --bg2:#121214; --panel:#151517; --text:#f7f7f2; --white:#ffffff; --muted:#a0a0a6;
+  --border:#27272a; --border2:#292929; --accent:#facc15; --accent2:#ffd83d; --ok:#8bd450; --err:#f26d6d; --warn:#f5a524;
+  --mono:"SF Mono","JetBrains Mono",Menlo,Consolas,monospace;
+  --sans:"Inter","Helvetica Neue",Arial,sans-serif;
+  --display:"Barlow Condensed","Oswald","Arial Narrow",Impact,sans-serif;
+}
+html{scroll-behavior:smooth;background:var(--bg)}
+body{margin:0;background:var(--bg);color:var(--muted);font-family:var(--sans);font-size:20px;line-height:1.55}
+main{max-width:1180px;margin:0 auto;padding:2.5rem 1.5rem 6rem}
+section,.phase{scroll-margin-top:1rem}
+h1,h2,h3,h4{color:var(--text);font-family:var(--display);text-transform:uppercase;letter-spacing:.03em;line-height:1.1;margin:0 0 .6em}
+h1{font-size:3.4rem;color:var(--white)}
+h2{font-size:2.3rem;margin-top:3rem;padding-top:1.2rem;border-top:1px solid var(--border);position:relative}
+h2::before{content:"";display:inline-block;width:.55em;height:.55em;background:var(--accent);margin-right:.45em;vertical-align:.05em}
+h3{font-size:1.6rem;margin-top:2rem}
+h4{font-size:1.2rem;margin-top:1.5rem;color:var(--accent2)}
+p{margin:0 0 1rem}
+a{color:var(--accent2);text-decoration:none}a:hover{text-decoration:underline}
+strong{color:var(--text)}
+code{font-family:var(--mono);font-size:.82em;background:var(--bg2);border:1px solid var(--border2);border-radius:4px;padding:.12em .42em;color:var(--text);white-space:nowrap}
+pre{background:var(--bg2);border:1px solid var(--border2);border-radius:6px;padding:1rem 1.2rem;overflow:auto;font-family:var(--mono);font-size:.8em;line-height:1.5;color:var(--text)}
+pre code{background:none;border:none;padding:0;white-space:pre;font-size:1em}
+.ic{display:inline-block;width:1.1em;height:1.1em;vertical-align:-0.18em;margin-right:.35em;flex:0 0 auto}
+.meta summary{cursor:pointer;color:var(--accent);font-family:var(--mono);font-size:.85rem;letter-spacing:.08em;text-transform:uppercase}
+.meta dl{display:grid;grid-template-columns:max-content 1fr;gap:.35rem 1.2rem;margin:.8rem 0 0;font-family:var(--mono);font-size:.8rem}
+.meta dt{color:var(--accent);text-transform:uppercase}.meta dd{margin:0;color:var(--text);word-break:break-all}
+figure{margin:1.6rem 0;text-align:center}
+figure img{max-width:100%;border:1px solid var(--border);border-radius:6px}
+figure svg{max-width:100%;height:auto;border:1px solid var(--border);border-radius:6px;background:var(--bg2)}
+figcaption{margin-top:.6rem;color:var(--muted);font-size:.85rem;font-family:var(--mono);letter-spacing:.03em}
+.toc{background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:1.2rem 1.6rem;margin:1.5rem 0}
+.toc h2{border:none;margin:0 0 .6rem;padding:0;font-size:1.4rem}.toc h2::before{display:none}
+.toc ol{margin:0;padding-left:1.4rem;line-height:1.7}.toc ol ol{padding-left:1.6rem}
+.tag{display:inline-block;font-family:var(--mono);font-size:.68rem;letter-spacing:.08em;text-transform:uppercase;padding:.1em .5em;border-radius:3px;margin-right:.35em;vertical-align:.15em;border:1px solid var(--border2)}
+.tag.existing{color:var(--muted)}.tag.new{color:var(--bg);background:var(--accent);border-color:var(--accent)}
+.ftree,.ftree ul{list-style:none;margin:0;padding-left:1.15rem;border-left:1px solid #292929}
+.ftree{padding-left:0;border-left:none}
+.ftree li{margin:.35rem 0}
+.ftree .dir>code{font-weight:600}
+table{width:100%;border-collapse:collapse;margin:1rem 0 1.5rem;font-size:.9em}
+th,td{border:1px solid var(--border);padding:.55rem .7rem;text-align:left;vertical-align:top}
+th{color:var(--text);background:var(--bg2);font-family:var(--display);text-transform:uppercase;letter-spacing:.05em;font-weight:600}
+td{color:var(--muted)}
+.phase{background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:1.4rem 1.8rem;margin:1.6rem 0}
+.phase h3{margin-top:0}
+.status{color:var(--accent);font-weight:700;background:var(--bg);border-color:var(--accent)}
+ul.checklist{list-style:none;padding-left:0;margin:.4rem 0 1rem}
+ul.checklist li{margin:.45rem 0;padding-left:.2rem}
+.loop{border:1px dashed var(--accent);border-radius:6px;padding:.8rem 1rem;color:var(--text);background:rgba(250,204,21,.05);margin-top:1rem}
+.callout{border-left:4px solid var(--accent);background:var(--bg2);padding:.8rem 1.1rem;margin:1rem 0;border-radius:0 6px 6px 0}
+.callout.danger{border-color:var(--err)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:1.2rem}
+@media(max-width:900px){.grid2{grid-template-columns:1fr}}
+kbd{font-family:var(--mono);font-size:.8em;border:1px solid var(--border2);border-bottom-width:2px;border-radius:4px;padding:.05em .4em;color:var(--text)}
+details.q{border:1px solid var(--border);border-radius:6px;padding:.6rem 1rem;margin:.6rem 0}
+details.q summary{cursor:pointer;color:var(--text)}
+.num{font-family:var(--display);font-size:2.6rem;color:var(--accent);line-height:1;margin-right:.4rem;vertical-align:-.1em}
+</style>
+</head>
+<body>
+
+<!-- ===== INLINE ICON SPRITE (self-contained; raises human scan-ability) ===== -->
+<svg xmlns="http://www.w3.org/2000/svg" width="0" height="0" style="position:absolute;width:0;height:0;overflow:hidden" aria-hidden="true">
+  <symbol id="ic-agent" viewBox="0 0 24 24">
+    <circle cx="12" cy="3" r="1.4" fill="#8B5CF6"/>
+    <path d="M12 4.4V7" stroke="#8B5CF6" stroke-width="1.8" stroke-linecap="round"/>
+    <rect x="4" y="7" width="16" height="12" rx="4" fill="none" stroke="#8B5CF6" stroke-width="1.8"/>
+    <circle cx="9.5" cy="13" r="1.6" fill="#8B5CF6"/>
+    <circle cx="14.5" cy="13" r="1.6" fill="#8B5CF6"/>
+  </symbol>
+  <symbol id="ic-dbtype" viewBox="0 0 24 24">
+    <!-- Brackets from ic-type, pushed outwards to make space -->
+    <path d="M7 4c-2 0-3 1-3 3v2c0 1-.8 2-2 2v2c1.2 0 2 1 2 2v2c0 2 1 3 3 3" fill="none" stroke="#8B5CF6" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M17 4c2 0 3 1 3 3v2c0 1 .8 2 2 2v2c-1.2 0-2 1-2 2v2c0 2-1 3-3 3" fill="none" stroke="#8B5CF6" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+    <!-- Database cylinder from ic-table, shrunk and centered in the middle -->
+    <ellipse cx="12" cy="8.5" rx="3.5" ry="1.5" fill="none" stroke="#2DD4BF" stroke-width="1.4"/>
+    <path d="M8.5 8.5v6.5c0 0.85 1.55 1.5 3.5 1.5s3.5-.65 3.5-1.5V8.5" fill="none" stroke="#2DD4BF" stroke-width="1.4"/>
+    <path d="M8.5 11.75c0 0.85 1.55 1.5 3.5 1.5s3.5-.65 3.5-1.5" fill="none" stroke="#2DD4BF" stroke-width="1.4"/>
+  </symbol>
+  <symbol id="ic-file" viewBox="0 0 24 24">
+    <path d="M6 2.5h7.5L19 8v12.5a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-17a1 1 0 0 1 1-1z" fill="#1E2638" stroke="#8A93A6" stroke-width="1.3"/>
+    <path d="M13.5 2.5V8H19" fill="none" stroke="#8A93A6" stroke-width="1.3" stroke-linejoin="round"/>
+  </symbol>
+  <symbol id="ic-http" viewBox="0 0 24 24">
+    <circle cx="12" cy="12" r="9" fill="none" stroke="#2DD4BF" stroke-width="1.7"/>
+    <ellipse cx="12" cy="12" rx="3.7" ry="9" fill="none" stroke="#2DD4BF" stroke-width="1.7"/>
+    <path d="M3.2 9.2h17.6M3.2 14.8h17.6" stroke="#2DD4BF" stroke-width="1.7" fill="none"/>
+  </symbol>
+  <symbol id="ic-javascript" viewBox="0 0 128 128">
+    <path fill="#F0DB4F" d="M1.408 1.408h125.184v125.185H1.408z"/>
+    <path fill="#323330" d="M116.347 96.736c-.917-5.711-4.641-10.508-15.672-14.981-3.832-1.761-8.104-3.022-9.377-5.926-.452-1.69-.512-2.642-.226-3.665.821-3.32 4.784-4.355 7.925-3.403 2.023.678 3.938 2.237 5.093 4.724 5.402-3.498 5.391-3.475 9.163-5.879-1.381-2.141-2.118-3.129-3.022-4.045-3.249-3.629-7.676-5.498-14.756-5.355l-3.688.477c-3.534.893-6.902 2.748-8.877 5.235-5.926 6.724-4.236 18.492 2.975 23.335 7.104 5.332 17.54 6.545 18.873 11.531 1.297 6.104-4.486 8.08-10.234 7.378-4.236-.881-6.592-3.034-9.139-6.949-4.688 2.713-4.688 2.713-9.508 5.485 1.143 2.499 2.344 3.63 4.26 5.795 9.068 9.198 31.76 8.746 35.83-5.176.165-.478 1.261-3.666.38-8.581zM69.462 58.943H57.753l-.048 30.272c0 6.438.333 12.34-.714 14.149-1.713 3.558-6.152 3.117-8.175 2.427-2.059-1.012-3.106-2.451-4.319-4.485-.333-.584-.583-1.036-.667-1.071l-9.52 5.83c1.583 3.249 3.915 6.069 6.902 7.901 4.462 2.678 10.459 3.499 16.731 2.059 4.082-1.189 7.604-3.652 9.448-7.401 2.666-4.915 2.094-10.864 2.07-17.444.06-10.735.001-21.468.001-32.237z"/>
+  </symbol>
+  <symbol id="ic-json" viewBox="0 0 24 24">
+    <rect width="24" height="24" rx="5" fill="#1E2638"/>
+    <text x="12" y="16.6" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="700" fill="#F5A623" text-anchor="middle">{ }</text>
+  </symbol>
+  <symbol id="ic-markdown" viewBox="0 0 24 24">
+    <path fill="#9AA4B2" d="M22.27 19.385H1.73A1.73 1.73 0 010 17.655V6.345a1.73 1.73 0 011.73-1.73h20.54A1.73 1.73 0 0124 6.345v11.308a1.73 1.73 0 01-1.73 1.731zM5.769 15.923v-4.5l2.308 2.885 2.307-2.885v4.5h2.308V8.078h-2.308l-2.307 2.885-2.308-2.885H3.46v7.847zM21.232 12h-2.309V8.077h-2.307V12h-2.308l3.461 4.039z"/>
+  </symbol>
+  <symbol id="ic-python" viewBox="0 0 128 128">
+    <linearGradient id="python-original-a" gradientUnits="userSpaceOnUse" x1="70.252" y1="1237.476" x2="170.659" y2="1151.089" gradientTransform="matrix(.563 0 0 -.568 -29.215 707.817)">
+    <stop offset="0" stop-color="#5a9fd4"/>
+    <stop offset="1" stop-color="#306998"/>
+    </linearGradient>
+    <linearGradient id="python-original-b" gradientUnits="userSpaceOnUse" x1="209.474" y1="1098.811" x2="173.62" y2="1149.537" gradientTransform="matrix(.563 0 0 -.568 -29.215 707.817)">
+    <stop offset="0" stop-color="#ffd43b"/>
+    <stop offset="1" stop-color="#ffe873"/>
+    </linearGradient>
+    <path fill="url(#python-original-a)" d="M63.391 1.988c-4.222.02-8.252.379-11.8 1.007-10.45 1.846-12.346 5.71-12.346 12.837v9.411h24.693v3.137H29.977c-7.176 0-13.46 4.313-15.426 12.521-2.268 9.405-2.368 15.275 0 25.096 1.755 7.311 5.947 12.519 13.124 12.519h8.491V67.234c0-8.151 7.051-15.34 15.426-15.34h24.665c6.866 0 12.346-5.654 12.346-12.548V15.833c0-6.693-5.646-11.72-12.346-12.837-4.244-.706-8.645-1.027-12.866-1.008zM50.037 9.557c2.55 0 4.634 2.117 4.634 4.721 0 2.593-2.083 4.69-4.634 4.69-2.56 0-4.633-2.097-4.633-4.69-.001-2.604 2.073-4.721 4.633-4.721z" transform="translate(0 10.26)"/>
+    <path fill="url(#python-original-b)" d="M91.682 28.38v10.966c0 8.5-7.208 15.655-15.426 15.655H51.591c-6.756 0-12.346 5.783-12.346 12.549v23.515c0 6.691 5.818 10.628 12.346 12.547 7.816 2.297 15.312 2.713 24.665 0 6.216-1.801 12.346-5.423 12.346-12.547v-9.412H63.938v-3.138h37.012c7.176 0 9.852-5.005 12.348-12.519 2.578-7.735 2.467-15.174 0-25.096-1.774-7.145-5.161-12.521-12.348-12.521h-9.268zM77.809 87.927c2.561 0 4.634 2.097 4.634 4.692 0 2.602-2.074 4.719-4.634 4.719-2.55 0-4.633-2.117-4.633-4.719 0-2.595 2.083-4.692 4.633-4.692z" transform="translate(0 10.26)"/>
+    <radialGradient id="python-original-c" cx="1825.678" cy="444.45" r="26.743" gradientTransform="matrix(0 -.24 -1.055 0 532.979 557.576)" gradientUnits="userSpaceOnUse">
+    <stop offset="0" stop-color="#B8B8B8" stop-opacity=".498"/>
+    <stop offset="1" stop-color="#7F7F7F" stop-opacity="0"/>
+    </radialGradient>
+    <path opacity=".444" fill="url(#python-original-c)" d="M97.309 119.597c0 3.543-14.816 6.416-33.091 6.416-18.276 0-33.092-2.873-33.092-6.416 0-3.544 14.815-6.417 33.092-6.417 18.275 0 33.091 2.872 33.091 6.417z"/>
+  </symbol>
+  <symbol id="ic-sql" viewBox="0 0 24 24">
+    <path fill="#336791" d="M23.5594 14.7228a.5269.5269 0 0 0-.0563-.1191c-.139-.2632-.4768-.3418-1.0074-.2321-1.6533.3411-2.2935.1312-2.5256-.0191 1.342-2.0482 2.445-4.522 3.0411-6.8297.2714-1.0507.7982-3.5237.1222-4.7316a1.5641 1.5641 0 0 0-.1509-.235C21.6931.9086 19.8007.0248 17.5099.0005c-1.4947-.0158-2.7705.3461-3.1161.4794a9.449 9.449 0 0 0-.5159-.0816 8.044 8.044 0 0 0-1.3114-.1278c-1.1822-.0184-2.2038.2642-3.0498.8406-.8573-.3211-4.7888-1.645-7.2219.0788C.9359 2.1526.3086 3.8733.4302 6.3043c.0409.818.5069 3.334 1.2423 5.7436.4598 1.5065.9387 2.7019 1.4334 3.582.553.9942 1.1259 1.5933 1.7143 1.7895.4474.1491 1.1327.1441 1.8581-.7279.8012-.9635 1.5903-1.8258 1.9446-2.2069.4351.2355.9064.3625 1.39.3772a.0569.0569 0 0 0 .0004.0041 11.0312 11.0312 0 0 0-.2472.3054c-.3389.4302-.4094.5197-1.5002.7443-.3102.064-1.1344.2339-1.1464.8115-.0025.1224.0329.2309.0919.3268.2269.4231.9216.6097 1.015.6331 1.3345.3335 2.5044.092 3.3714-.6787-.017 2.231.0775 4.4174.3454 5.0874.2212.5529.7618 1.9045 2.4692 1.9043.2505 0 .5263-.0291.8296-.0941 1.7819-.3821 2.5557-1.1696 2.855-2.9059.1503-.8707.4016-2.8753.5388-4.1012.0169-.0703.0357-.1207.057-.1362.0007-.0005.0697-.0471.4272.0307a.3673.3673 0 0 0 .0443.0068l.2539.0223.0149.001c.8468.0384 1.9114-.1426 2.5312-.4308.6438-.2988 1.8057-1.0323 1.5951-1.6698zM2.371 11.8765c-.7435-2.4358-1.1779-4.8851-1.2123-5.5719-.1086-2.1714.4171-3.6829 1.5623-4.4927 1.8367-1.2986 4.8398-.5408 6.108-.13-.0032.0032-.0066.0061-.0098.0094-2.0238 2.044-1.9758 5.536-1.9708 5.7495-.0002.0823.0066.1989.0162.3593.0348.5873.0996 1.6804-.0735 2.9184-.1609 1.1504.1937 2.2764.9728 3.0892.0806.0841.1648.1631.2518.2374-.3468.3714-1.1004 1.1926-1.9025 2.1576-.5677.6825-.9597.5517-1.0886.5087-.3919-.1307-.813-.5871-1.2381-1.3223-.4796-.839-.9635-2.0317-1.4155-3.5126zm6.0072 5.0871c-.1711-.0428-.3271-.1132-.4322-.1772.0889-.0394.2374-.0902.4833-.1409 1.2833-.2641 1.4815-.4506 1.9143-1.0002.0992-.126.2116-.2687.3673-.4426a.3549.3549 0 0 0 .0737-.1298c.1708-.1513.2724-.1099.4369-.0417.156.0646.3078.26.3695.4752.0291.1016.0619.2945-.0452.4444-.9043 1.2658-2.2216 1.2494-3.1676 1.0128zm2.094-3.988-.0525.141c-.133.3566-.2567.6881-.3334 1.003-.6674-.0021-1.3168-.2872-1.8105-.8024-.6279-.6551-.9131-1.5664-.7825-2.5004.1828-1.3079.1153-2.4468.079-3.0586-.005-.0857-.0095-.1607-.0122-.2199.2957-.2621 1.6659-.9962 2.6429-.7724.4459.1022.7176.4057.8305.928.5846 2.7038.0774 3.8307-.3302 4.7363-.084.1866-.1633.3629-.2311.5454zm7.3637 4.5725c-.0169.1768-.0358.376-.0618.5959l-.146.4383a.3547.3547 0 0 0-.0182.1077c-.0059.4747-.054.6489-.115.8693-.0634.2292-.1353.4891-.1794 1.0575-.11 1.4143-.8782 2.2267-2.4172 2.5565-1.5155.3251-1.7843-.4968-2.0212-1.2217a6.5824 6.5824 0 0 0-.0769-.2266c-.2154-.5858-.1911-1.4119-.1574-2.5551.0165-.5612-.0249-1.9013-.3302-2.6462.0044-.2932.0106-.5909.019-.8918a.3529.3529 0 0 0-.0153-.1126 1.4927 1.4927 0 0 0-.0439-.208c-.1226-.4283-.4213-.7866-.7797-.9351-.1424-.059-.4038-.1672-.7178-.0869.067-.276.1831-.5875.309-.9249l.0529-.142c.0595-.16.134-.3257.213-.5012.4265-.9476 1.0106-2.2453.3766-5.1772-.2374-1.0981-1.0304-1.6343-2.2324-1.5098-.7207.0746-1.3799.3654-1.7088.5321a5.6716 5.6716 0 0 0-.1958.1041c.0918-1.1064.4386-3.1741 1.7357-4.4823a4.0306 4.0306 0 0 1 .3033-.276.3532.3532 0 0 0 .1447-.0644c.7524-.5706 1.6945-.8506 2.802-.8325.4091.0067.8017.0339 1.1742.081 1.939.3544 3.2439 1.4468 4.0359 2.3827.8143.9623 1.2552 1.9315 1.4312 2.4543-1.3232-.1346-2.2234.1268-2.6797.779-.9926 1.4189.543 4.1729 1.2811 5.4964.1353.2426.2522.4522.2889.5413.2403.5825.5515.9713.7787 1.2552.0696.087.1372.1714.1885.245-.4008.1155-1.1208.3825-1.0552 1.717-.0123.1563-.0423.4469-.0834.8148-.0461.2077-.0702.4603-.0994.7662zm.8905-1.6211c-.0405-.8316.2691-.9185.5967-1.0105a2.8566 2.8566 0 0 0 .135-.0406 1.202 1.202 0 0 0 .1342.103c.5703.3765 1.5823.4213 3.0068.1344-.2016.1769-.5189.3994-.9533.6011-.4098.1903-1.0957.333-1.7473.3636-.7197.0336-1.0859-.0807-1.1721-.151zm.5695-9.2712c-.0059.3508-.0542.6692-.1054 1.0017-.055.3576-.112.7274-.1264 1.1762-.0142.4368.0404.8909.0932 1.3301.1066.887.216 1.8003-.2075 2.7014a3.5272 3.5272 0 0 1-.1876-.3856c-.0527-.1276-.1669-.3326-.3251-.6162-.6156-1.1041-2.0574-3.6896-1.3193-4.7446.3795-.5427 1.3408-.5661 2.1781-.463zm.2284 7.0137a12.3762 12.3762 0 0 0-.0853-.1074l-.0355-.0444c.7262-1.1995.5842-2.3862.4578-3.4385-.0519-.4318-.1009-.8396-.0885-1.2226.0129-.4061.0666-.7543.1185-1.0911.0639-.415.1288-.8443.1109-1.3505.0134-.0531.0188-.1158.0118-.1902-.0457-.4855-.5999-1.938-1.7294-3.253-.6076-.7073-1.4896-1.4972-2.6889-2.0395.5251-.1066 1.2328-.2035 2.0244-.1859 2.0515.0456 3.6746.8135 4.8242 2.2824a.908.908 0 0 1 .0667.1002c.7231 1.3556-.2762 6.2751-2.9867 10.5405zm-8.8166-6.1162c-.025.1794-.3089.4225-.6211.4225a.5821.5821 0 0 1-.0809-.0056c-.1873-.026-.3765-.144-.5059-.3156-.0458-.0605-.1203-.178-.1055-.2844.0055-.0401.0261-.0985.0925-.1488.1182-.0894.3518-.1226.6096-.0867.3163.0441.6426.1938.6113.4186zm7.9305-.4114c.0111.0792-.049.201-.1531.3102-.0683.0717-.212.1961-.4079.2232a.5456.5456 0 0 1-.075.0052c-.2935 0-.5414-.2344-.5607-.3717-.024-.1765.2641-.3106.5611-.352.297-.0414.6111.0088.6356.1851z"/>
+  </symbol>
+  <symbol id="ic-swift" viewBox="0 0 128 128">
+    <path fill="#f05138" d="M126.33 34.06a39.32 39.32 0 00-.79-7.83 28.78 28.78 0 00-2.65-7.58 28.84 28.84 0 00-4.76-6.32 23.42 23.42 0 00-6.62-4.55 27.27 27.27 0 00-7.68-2.53c-2.65-.51-5.56-.51-8.21-.76H30.25a45.46 45.46 0 00-6.09.51 21.82 21.82 0 00-5.82 1.52c-.53.25-1.32.51-1.85.76a33.82 33.82 0 00-5 3.28c-.53.51-1.06.76-1.59 1.26a22.41 22.41 0 00-4.76 6.32 23.61 23.61 0 00-2.65 7.58 78.5 78.5 0 00-.79 7.83v60.39a39.32 39.32 0 00.79 7.83 28.78 28.78 0 002.65 7.58 28.84 28.84 0 004.76 6.32 23.42 23.42 0 006.62 4.55 27.27 27.27 0 007.68 2.53c2.65.51 5.56.51 8.21.76h63.22a45.08 45.08 0 008.21-.76 27.27 27.27 0 007.68-2.53 30.13 30.13 0 006.62-4.55 22.41 22.41 0 004.76-6.32 23.61 23.61 0 002.65-7.58 78.49 78.49 0 00.79-7.83V34.06z"/>
+    <path fill="#fefefe" d="M85 96.5c-11.11 6.13-26.38 6.76-41.75.47A64.53 64.53 0 0113.84 73a50 50 0 0010.85 6.32c15.87 7.1 31.73 6.61 42.9 0-15.9-11.66-29.4-26.82-39.46-39.2a43.47 43.47 0 01-5.29-6.82c12.16 10.61 31.5 24 38.38 27.79a271.77 271.77 0 01-27-32.34 266.8 266.8 0 0044.47 34.87c.71.38 1.26.7 1.7 1a32.7 32.7 0 001.21-3.51c3.71-12.89-.53-27.54-9.79-39.67C93.25 33.81 106 57.05 100.66 76.51c-.14.53-.29 1-.45 1.55l.19.22c10.59 12.63 7.68 26 6.35 23.5C101 91 90.37 94.33 85 96.5z"/>
+  </symbol>
+  <symbol id="ic-table" viewBox="0 0 24 24">
+    <ellipse cx="12" cy="6" rx="7" ry="3" fill="none" stroke="#2DD4BF" stroke-width="1.8"/>
+    <path d="M5 6v12c0 1.7 3.1 3 7 3s7-1.3 7-3V6" fill="none" stroke="#2DD4BF" stroke-width="1.8"/>
+    <path d="M5 12c0 1.7 3.1 3 7 3s7-1.3 7-3" fill="none" stroke="#2DD4BF" stroke-width="1.8"/>
+  </symbol>
+  <symbol id="ic-type" viewBox="0 0 24 24">
+    <path d="M10 4c-2 0-3 1-3 3v2c0 1-.8 2-2 2v2c1.2 0 2 1 2 2v2c0 2 1 3 3 3" fill="none" stroke="#8B5CF6" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M14 4c2 0 3 1 3 3v2c0 1 .8 2 2 2v2c-1.2 0-2 1-2 2v2c0 2-1 3-3 3" fill="none" stroke="#8B5CF6" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+  </symbol>
+  <symbol id="ic-typescript" viewBox="0 0 128 128">
+    <path fill="#fff" d="M22.67 47h99.67v73.67H22.67z"/>
+    <path data-name="original" fill="#007acc" d="M1.5 63.91v62.5h125v-125H1.5zm100.73-5a15.56 15.56 0 017.82 4.5 20.58 20.58 0 013 4c0 .16-5.4 3.81-8.69 5.85-.12.08-.6-.44-1.13-1.23a7.09 7.09 0 00-5.87-3.53c-3.79-.26-6.23 1.73-6.21 5a4.58 4.58 0 00.54 2.34c.83 1.73 2.38 2.76 7.24 4.86 8.95 3.85 12.78 6.39 15.16 10 2.66 4 3.25 10.46 1.45 15.24-2 5.2-6.9 8.73-13.83 9.9a38.32 38.32 0 01-9.52-.1 23 23 0 01-12.72-6.63c-1.15-1.27-3.39-4.58-3.25-4.82a9.34 9.34 0 011.15-.73L82 101l3.59-2.08.75 1.11a16.78 16.78 0 004.74 4.54c4 2.1 9.46 1.81 12.16-.62a5.43 5.43 0 00.69-6.92c-1-1.39-3-2.56-8.59-5-6.45-2.78-9.23-4.5-11.77-7.24a16.48 16.48 0 01-3.43-6.25 25 25 0 01-.22-8c1.33-6.23 6-10.58 12.82-11.87a31.66 31.66 0 019.49.26zm-29.34 5.24v5.12H56.66v46.23H45.15V69.26H28.88v-5a49.19 49.19 0 01.12-5.17C29.08 59 39 59 51 59h21.83z"/>
+  </symbol>
+  <symbol id="ic-vue" viewBox="0 0 24 24">
+    <path d="M2 3.5h4.3L12 13.2 17.7 3.5H22L12 20.5z" fill="#41B883"/>
+    <path d="M6.3 3.5h3.2L12 7.7l2.5-4.2h3.2L12 13.2z" fill="#35495E"/>
+  </symbol>
+</svg>
+
+<main>
+
+  <header>
+    <h1>Plan: Self-Compact Merge (fab-sc + astra-sc)</h1>
+    <details class="meta" open>
+      <summary>Metadata</summary>
+      <dl>
+        <dt>created</dt>      <dd>2026-09-15T17:38:37Z</dd>
+        <dt>modified</dt>     <dd>2026-09-15T17:38:37Z, 2026-09-15T17:43:46Z, 2026-09-15T17:50:23Z, 2026-09-15T17:53:32Z, 2026-09-15T17:55:45Z</dd>
+        <dt>commits</dt>      <dd>(none yet)</dd>
+        <dt>agent name</dt>   <dd><code><svg class="ic"><use href="#ic-agent"/></svg> fab-sc</code> (Claude Code, Fable 5.1), reviewed by <code><svg class="ic"><use href="#ic-agent"/></svg> astra-sc</code> (Codex, GPT-6 Astra)</dd>
+        <dt>session id</dt>   <dd>2392d222-072b-4150-a3f9-77d26b5e64bb</dd>
+        <dt>back refs</dt>    <dd><code><svg class="ic"><use href="#ic-file"/></svg> claude-fable-5-1/self-compact-pi-extension.html</code> (source plan A), <code><svg class="ic"><use href="#ic-file"/></svg> gpt-6-astra/self-compact.html</code> (source plan B), <code><svg class="ic"><use href="#ic-markdown"/></svg> ../prompts/end_draft_plan.md</code> (original requirements)</dd>
+        <dt>forward refs</dt> <dd><code><svg class="ic"><use href="#ic-markdown"/></svg> ../apps/self-compact/README.md</code>, <code><svg class="ic"><use href="#ic-markdown"/></svg> ../apps/self-compact/verification/REPORT.md</code></dd>
+      </dl>
+    </details>
+  </header>
+
+  <figure>
+    <img src="self-compact-merge/hero.png" alt="Two terminal modules with context gauges converge through a MERGE junction into one terminal whose single-line footer shows the model name and a context gauge with three markers.">
+    <figcaption>Two implementations, one extension: the merged self-compact keeps the strongest mechanism from each build.</figcaption>
+  </figure>
+
+  <nav id="toc" class="toc">
+    <h2>Contents</h2>
+    <ol>
+      <li><a href="#purpose">Purpose</a></li>
+      <li><a href="#problem">Problem</a></li>
+      <li><a href="#solution">Solution</a></li>
+      <li><a href="#files">Relevant Files</a></li>
+      <li><a href="#database-models">Database Models</a></li>
+      <li><a href="#phases">Implementation Phases</a>
+        <ol>
+          <li><a href="#phase-summary">Phase Summary</a></li>
+          <li><a href="#phase-1">Phase 1: Coordinate with astra-sc</a></li>
+          <li><a href="#phase-2">Phase 2: Merge the Core</a></li>
+          <li><a href="#phase-3">Phase 3: Clean Transcript and Unified Footer</a></li>
+          <li><a href="#phase-4">Phase 4: Harness and End-to-End Proof</a></li>
+          <li><a href="#phase-5">Phase 5: Repository Consolidation</a></li>
+          <li><a href="#phase-6">Phase 6: Cross-Agent Validation</a></li>
+        </ol>
+      </li>
+      <li><a href="#validation">Validation Commands</a></li>
+      <li><a href="#notes">Notes</a></li>
+      <li><a href="#amendments">Amendments</a></li>
+    </ol>
+  </nav>
+
+  <section id="purpose">
+    <h2>Purpose</h2>
+    <p>Merge the two independently built self-compact Pi extensions (build A by <code><svg class="ic"><use href="#ic-agent"/></svg> fab-sc</code>, build B by <code><svg class="ic"><use href="#ic-agent"/></svg> astra-sc</code>) into one final version at <code>apps/self-compact/</code>, keep the best mechanism from each, mirror the clean single-file layout of the harness <code>minimal</code> extension with a unified one-line footer, remove every injected chat message so the transcript only carries the user's prompts, consolidate the repository around that one version, and validate it end to end with the other agent.</p>
+  </section>
+
+  <section id="problem">
+    <h2>Problem</h2>
+    <p>Three builds existed side by side (claude-fable-5-1, gpt-6-astra, glm-5-2) with different tradeoffs. Build A had the safer enforcement (tool_call-only lock, lazy flag reading, enforced rejection, RPC-driven scripted e2e) but a two-line footer and loud injected notice/warning/forced messages in the transcript. Build B had a durable handoff transaction with ids, whole-batch sibling blocking, a factual summary framing, and an OpenRouter reasoning fix, but narrowed the active tool list (which hides the block reason behind "Tool X not found") and depended on npm packages. Neither matched the requested clean footer or the "user prompts only" transcript.</p>
+    <figure>
+      <svg viewBox="0 0 1100 320" width="1100" height="320" xmlns="http://www.w3.org/2000/svg" font-family="Menlo, Consolas, monospace">
+        <rect width="1100" height="320" fill="#121214"/>
+        <g font-size="20" text-anchor="middle">
+          <rect x="40" y="60" width="300" height="200" rx="6" fill="#0a0a0c" stroke="#facc15" stroke-width="2"/>
+          <text x="190" y="95" fill="#f7f7f2">build A: fab-sc</text>
+          <text x="190" y="135" fill="#a0a0a6" font-size="17">tool_call lock, lazy flags</text>
+          <text x="190" y="165" fill="#a0a0a6" font-size="17">RPC scripted e2e</text>
+          <text x="190" y="195" fill="#f26d6d" font-size="17">2-line footer, loud messages</text>
+          <rect x="400" y="60" width="300" height="200" rx="6" fill="#0a0a0c" stroke="#facc15" stroke-width="2"/>
+          <text x="550" y="95" fill="#f7f7f2">build B: astra-sc</text>
+          <text x="550" y="135" fill="#a0a0a6" font-size="17">handoff ids, sibling block</text>
+          <text x="550" y="165" fill="#a0a0a6" font-size="17">factual summary, reasoning fix</text>
+          <text x="550" y="195" fill="#f26d6d" font-size="17">narrowed tools, npm deps</text>
+          <rect x="760" y="60" width="300" height="200" rx="6" fill="#0a0a0c" stroke="#27272a" stroke-width="2"/>
+          <text x="910" y="95" fill="#a0a0a6">build C: glm-5-2</text>
+          <text x="910" y="160" fill="#f26d6d" font-size="17">removed</text>
+        </g>
+        <text x="550" y="300" fill="#a0a0a6" font-size="18" text-anchor="middle">three versions, one requested</text>
+      </svg>
+      <figcaption>Three implementations with complementary strengths and weaknesses; the user asked for one.</figcaption>
+    </figure>
+  </section>
+
+  <section id="solution">
+    <h2>Solution</h2>
+    <p>One entry file plus four helpers in <code>apps/self-compact/extensions/self-compact/</code>. From build A: threshold parsing with 90% cap and clamped defaults, prompt lookup and templating, the 20-cell bar, tool_call-only locking with an explicit reason, settings read in <code>session_start</code>, enforced rejection, and the RPC harness with a scripted provider. From build B: a single state snapshot with a durable handoff id carried through compaction details and the handoff message, whole-batch sibling blocking, delivery acknowledged only once Pi journals the handoff, recovery on <code>session_tree</code>, the factual summary framing, <code>reasoningEffort: low</code> for reasoning-enabled openai-completions models, and <code>maxTokens = min(8192, model.maxTokens)</code>. New for the user's requests: transient guidance through the <code>context</code> hook (never persisted, never rendered), a static one-line system-prompt note, a single-line replacement footer in the <code>minimal</code> style, one-line TUI phase entries, a compact handoff renderer, and a handoff whose content is exactly the note.</p>
+    <figure>
+      <svg viewBox="0 0 1100 360" width="1100" height="360" xmlns="http://www.w3.org/2000/svg" font-family="Menlo, Consolas, monospace">
+        <rect width="1100" height="360" fill="#121214"/>
+        <g font-size="18" text-anchor="middle">
+          <rect x="40" y="40" width="240" height="120" rx="6" fill="#0a0a0c" stroke="#facc15" stroke-width="2"/>
+          <text x="160" y="80" fill="#f7f7f2" font-size="20">from A</text>
+          <text x="160" y="110" fill="#a0a0a6">lock, flags, harness</text>
+          <text x="160" y="138" fill="#a0a0a6">thresholds, prompts, bar</text>
+          <rect x="40" y="200" width="240" height="120" rx="6" fill="#0a0a0c" stroke="#facc15" stroke-width="2"/>
+          <text x="160" y="240" fill="#f7f7f2" font-size="20">from B</text>
+          <text x="160" y="270" fill="#a0a0a6">handoff id, siblings</text>
+          <text x="160" y="298" fill="#a0a0a6">factual summary, reasoning</text>
+          <rect x="430" y="110" width="260" height="140" rx="6" fill="#0a0a0c" stroke="#8bd450" stroke-width="3"/>
+          <text x="560" y="160" fill="#8bd450" font-size="22">apps/self-compact</text>
+          <text x="560" y="195" fill="#a0a0a6">1 entry + 4 helpers</text>
+          <text x="560" y="223" fill="#a0a0a6">0 npm dependencies</text>
+          <rect x="820" y="40" width="240" height="120" rx="6" fill="#0a0a0c" stroke="#a0a0a6" stroke-width="2"/>
+          <text x="940" y="80" fill="#f7f7f2" font-size="20">new</text>
+          <text x="940" y="110" fill="#a0a0a6">transient guidance</text>
+          <text x="940" y="138" fill="#a0a0a6">one-line footer</text>
+          <rect x="820" y="200" width="240" height="120" rx="6" fill="#0a0a0c" stroke="#a0a0a6" stroke-width="2"/>
+          <text x="940" y="240" fill="#f7f7f2" font-size="20">clean transcript</text>
+          <text x="940" y="270" fill="#a0a0a6">user prompts only</text>
+          <text x="940" y="298" fill="#a0a0a6">note = exact content</text>
+        </g>
+        <g stroke="#a0a0a6" stroke-width="2" fill="#a0a0a6">
+          <line x1="280" y1="100" x2="422" y2="150"/><polygon points="422,150 410,150 414,141"/>
+          <line x1="280" y1="260" x2="422" y2="210"/><polygon points="422,210 410,210 414,219"/>
+          <line x1="820" y1="100" x2="698" y2="150"/><polygon points="698,150 710,150 706,141"/>
+          <line x1="820" y1="260" x2="698" y2="210"/><polygon points="698,210 710,210 706,219"/>
+        </g>
+      </svg>
+      <figcaption>What each side contributed and what was added for the clean-transcript, unified-footer request.</figcaption>
+    </figure>
+  </section>
+
+  <section id="files" class="files">
+    <h2>Relevant Files</h2>
+    <h3>Existing Files</h3>
+    <ul class="ftree">
+      <li class="dir"><code>specs/</code>
+        <ul>
+          <li><span class="tag existing">existing</span> <code><svg class="ic"><use href="#ic-file"/></svg> claude-fable-5-1/self-compact-pi-extension.html</code> — plan of build A (kept).</li>
+          <li><span class="tag existing">existing</span> <code><svg class="ic"><use href="#ic-file"/></svg> gpt-6-astra/self-compact.html</code> — plan of build B (kept).</li>
+          <li><span class="tag existing">existing</span> <code><svg class="ic"><use href="#ic-file"/></svg> glm-5-2/self-compact-extension.html</code> — plan of build C (kept; its app was removed).</li>
+        </ul>
+      </li>
+      <li class="dir"><code>/Users/indydevdan/Documents/projects/harness/extensions/minimal/</code>
+        <ul>
+          <li><span class="tag existing">existing</span> <code><svg class="ic"><use href="#ic-typescript"/></svg> minimal.ts</code> — reference for the single-line replacement footer and the one-file layout.</li>
+        </ul>
+      </li>
+      <li class="dir"><code>ai_docs/</code>
+        <ul>
+          <li><span class="tag existing">existing</span> <code><svg class="ic"><use href="#ic-markdown"/></svg> pi-extensions.md</code> — <code>context</code> hook (transient messages), <code>tool_call</code> preflight order, <code>sendMessage</code> options.</li>
+          <li><span class="tag existing">existing</span> <code><svg class="ic"><use href="#ic-markdown"/></svg> pi-compaction.md</code> — compaction hooks and entry details used for the handoff id.</li>
+        </ul>
+      </li>
+    </ul>
+    <h3>New Files</h3>
+    <ul class="ftree">
+      <li class="dir"><code>apps/self-compact/extensions/self-compact/</code>
+        <ul>
+          <li><span class="tag new">new</span> <code><svg class="ic"><use href="#ic-typescript"/></svg> self-compact.ts</code> — merged entry: flags, tool, commands, events, transient guidance, footer, compaction override, handoff transaction.</li>
+          <li><span class="tag new">new</span> <code><svg class="ic"><use href="#ic-typescript"/></svg> thresholds.ts</code> — from A, unchanged.</li>
+          <li><span class="tag new">new</span> <code><svg class="ic"><use href="#ic-typescript"/></svg> context-bar.ts</code> — from A, unchanged.</li>
+          <li><span class="tag new">new</span> <code><svg class="ic"><use href="#ic-typescript"/></svg> prompts.ts</code> — from A, built-in defaults trimmed to the minimal phase-marked texts.</li>
+          <li><span class="tag new">new</span> <code><svg class="ic"><use href="#ic-typescript"/></svg> state.ts</code> — new: snapshot state with handoff id (B) plus branch checks (A).</li>
+        </ul>
+      </li>
+      <li class="dir"><code>apps/self-compact/.pi/self-compact/</code>
+        <ul>
+          <li><span class="tag new">new</span> <code><svg class="ic"><use href="#ic-markdown"/></svg> USER_PROMPT_SOFT_SELF_COMPACT.md</code>, <code><svg class="ic"><use href="#ic-markdown"/></svg> USER_PROMPT_WARNING_SELF_COMPACT.md</code>, <code><svg class="ic"><use href="#ic-markdown"/></svg> USER_PROMPT_COMPACTION_MESSAGE.md</code> — A's texts, shortened; the summary prompt adds B's factual boundaries.</li>
+        </ul>
+      </li>
+      <li class="dir"><code>apps/self-compact/tests/</code>
+        <ul>
+          <li><span class="tag new">new</span> <code><svg class="ic"><use href="#ic-typescript"/></svg> harness/fake-provider.ts</code> — scripted model; now emits sibling batches and reads past transient guidance.</li>
+          <li><span class="tag new">new</span> <code><svg class="ic"><use href="#ic-typescript"/></svg> e2e/lifecycle.test.ts</code>, <code><svg class="ic"><use href="#ic-typescript"/></svg> e2e/failure-recovery.test.ts</code>, <code><svg class="ic"><use href="#ic-typescript"/></svg> e2e/launch-variants.test.ts</code>, <code><svg class="ic"><use href="#ic-typescript"/></svg> e2e/real-model.test.ts</code> — adapted to the clean-transcript model, plus sibling-order and no-restart-after-reload checks.</li>
+        </ul>
+      </li>
+      <li class="dir"><code>/</code>
+        <ul>
+          <li><span class="tag new">new</span> <code><svg class="ic"><use href="#ic-file"/></svg> justfile</code> — rewritten around the one version: run, run-defaults, demo, test, e2e, real, verify, specs.</li>
+          <li><span class="tag new">new</span> <code><svg class="ic"><use href="#ic-markdown"/></svg> README.md</code>, <code><svg class="ic"><use href="#ic-markdown"/></svg> .claude/commands/prime.md</code>, <code><svg class="ic"><use href="#ic-file"/></svg> LICENSE</code>, <code><svg class="ic"><use href="#ic-file"/></svg> .gitignore</code> — live-viewing setup.</li>
+          <li><span class="tag new">new</span> <code><svg class="ic"><use href="#ic-file"/></svg> specs/self-compact-merge.html</code> — this document.</li>
+        </ul>
+      </li>
+    </ul>
+  </section>
+
+  <section id="database-models" class="database-models">
+    <h2>Database Models</h2>
+    <p>No database. State lives in Pi session entries: <code>self-compact-state</code> snapshots, <code>self-compact-phase</code> lines (TUI only), <code>self-compact-info</code> cards, and the <code>self-compact-handoff</code> message.</p>
+    <h3>Existing Models</h3>
+    <ul class="ftree"></ul>
+    <h3>New Models</h3>
+    <ul class="ftree"></ul>
+  </section>
+
+  <section id="phases">
+    <h2>Implementation Phases</h2>
+    <p><strong>IMPORTANT:</strong> Execute every phase and task step by step, in order, top to bottom.</p>
+    <p>Status markers: <code>[]</code> idle · <code>[wip]</code> in progress · <code>[x]</code> complete · <code>[f]</code> failed. Check off work at BOTH levels.</p>
+
+    <h3 id="phase-summary">Phase Summary</h3>
+    <table class="phase-summary">
+      <thead><tr><th>Phase</th><th>Purpose</th><th>Done when</th></tr></thead>
+      <tbody>
+        <tr><td><a href="#phase-1">1. Coordinate with astra-sc</a></td><td>Agree the merge design over the mailbox before writing code.</td><td>Design decisions D1–D5 acknowledged by both agents.</td></tr>
+        <tr><td><a href="#phase-2">2. Merge the Core</a></td><td>One entry plus helpers with the best mechanism from each build.</td><td>Typecheck and unit suites green on <code>apps/self-compact</code>.</td></tr>
+        <tr><td><a href="#phase-3">3. Clean Transcript and Unified Footer</a></td><td>No injected chat messages; single-line footer; exact-note handoff.</td><td>TUI capture shows only user prompts, phase lines, handoff line, and the footer.</td></tr>
+        <tr><td><a href="#phase-4">4. Harness and End-to-End Proof</a></td><td>Scripted-provider e2e incl. sibling batches and no-restart; live model run.</td><td><code>verify.sh</code> 9/9 with <code>SC_REAL=1</code>.</td></tr>
+        <tr><td><a href="#phase-5">5. Repository Consolidation</a></td><td>Remove glm-5-2, move previous versions to tmp, justfile, README, prime, LICENSE.</td><td><code>apps/</code> holds only <code>self-compact</code>; <code>just --list</code> shows the new recipes; README and /prime exist.</td></tr>
+        <tr><td><a href="#phase-6">6. Cross-Agent Validation</a></td><td>astra-sc runs the suites independently.</td><td>Reply to mailbox message 35 with per-command results.</td></tr>
+      </tbody>
+    </table>
+
+    <div class="phase" id="phase-1">
+      <h3><code class="status">[x]</code> Phase 1: Coordinate with astra-sc</h3>
+      <p>Mailbox thread (ids 31–36) between <code><svg class="ic"><use href="#ic-agent"/></svg> fab-sc</code> and <code><svg class="ic"><use href="#ic-agent"/></svg> astra-sc</code>.</p>
+      <h4>1. Proposal and review</h4>
+      <ul class="checklist">
+        <li><code class="status">[x]</code> Send the merge proposal: layout, clean transcript, keep-lists from both builds (message 31).</li>
+        <li><code class="status">[x]</code> Receive astra-sc's review (message 32): D1 durable handoff transaction, D2 whole-batch sibling preflight, D3 factual summary + reasoning fix, F1 use the context hook for live guidance, F2 hidden handoff is fine.</li>
+        <li><code class="status">[x]</code> Lock decisions and reply (message 33); adopt the note-fidelity detail from message 34 (handoff content equals the exact note).</li>
+      </ul>
+      <h4>2. Testing Strategy</h4>
+      <p>Verified by the mailbox thread itself.</p>
+      <ul class="checklist">
+        <li><code class="status">[x]</code> <code>mailbox inbox --agent fab-sc</code> — replies 32, 34, 36 received and processed.</li>
+      </ul>
+      <div class="loop">🔁 <strong>Do not exit this phase until every box above is checked.</strong></div>
+    </div>
+
+    <div class="phase" id="phase-2">
+      <h3><code class="status">[x]</code> Phase 2: Merge the Core</h3>
+      <p>Seed from build A's tested modules, rewrite the entry and the state module with build B's transaction model.</p>
+      <h4>1. Entry and state</h4>
+      <ul class="checklist">
+        <li><code class="status">[x]</code> <code><svg class="ic"><use href="#ic-typescript"/></svg> state.ts</code>: <code>PersistedState { version, cycle, locked, handoff? { id, note, status, attempts, error } }</code>; <code>recoverState()</code> takes the latest snapshot, then checks the branch for a compaction with the handoff id and for the journaled handoff message (answered vs unanswered).</li>
+        <li><code class="status">[x]</code> <code><svg class="ic"><use href="#ic-typescript"/></svg> self-compact.ts</code>: tool with note validation and saved-note enforcement on retry, tool_call-only lock plus whole-batch sibling block, idle-only <code>ctx.compact()</code>, summary override with factual framing and <code>reasoningEffort: low</code>, handoff delivery once idle, acknowledgement on <code>message_end</code>, recovery on <code>session_start</code> and <code>session_tree</code>, "nothing to compact" completes the handoff immediately.</li>
+        <li><code class="status">[x]</code> Settings read in <code>session_start</code>; rejection blocks every tool with the error as reason; defaults clamp on small windows.</li>
+      </ul>
+      <h4>2. Testing Strategy</h4>
+      <ul class="checklist">
+        <li><code class="status">[x]</code> <code>npm run test:unit</code> — 29 pass (thresholds, bar, prompts, new recovery reducer).</li>
+        <li><code class="status">[x]</code> <code>npx -y -p typescript tsc --noEmit -p tsconfig.json</code> — clean.</li>
+      </ul>
+      <div class="loop">🔁 <strong>Do not exit this phase until every box above is checked.</strong></div>
+    </div>
+
+    <div class="phase" id="phase-3">
+      <h3><code class="status">[x]</code> Phase 3: Clean Transcript and Unified Footer</h3>
+      <p>Only the user's prompts and the returned note are persisted. Threshold guidance is transient; the footer is one line.</p>
+      <figure>
+        <svg viewBox="0 0 1100 300" width="1100" height="300" xmlns="http://www.w3.org/2000/svg" font-family="Menlo, Consolas, monospace">
+          <rect width="1100" height="300" fill="#121214"/>
+          <rect x="60" y="40" width="980" height="180" rx="6" fill="#0a0a0c" stroke="#27272a" stroke-width="2"/>
+          <text x="90" y="80" fill="#f7f7f2" font-size="18">&gt; Start the scripted work.</text>
+          <text x="90" y="112" fill="#f5a524" font-size="18">self-compact · warning threshold crossed at 52.5%</text>
+          <text x="90" y="144" fill="#f26d6d" font-size="18">self-compact · forced threshold crossed at 62.5%</text>
+          <text x="90" y="176" fill="#8bd450" font-size="18">self-compact · handoff  cycle 1, note returned (237 chars)</text>
+          <rect x="60" y="232" width="980" height="40" rx="4" fill="#0a0a0c" stroke="#27272a" stroke-width="2"/>
+          <text x="80" y="259" fill="#a0a0a6" font-size="18">scripted · cycle 1</text>
+          <text x="1020" y="259" fill="#facc15" font-size="18" text-anchor="end">[###~#====!-|--------] 43% NOTICE</text>
+        </svg>
+        <figcaption>Transcript after a full cycle: the user's prompt, two one-line phase entries, one handoff line, and the one-line footer.</figcaption>
+      </figure>
+      <h4>1. Messages</h4>
+      <ul class="checklist">
+        <li><code class="status">[x]</code> Remove the notice/warning/forced custom messages. Add a <code>context</code> hook that appends a transient <code>self-compact-guidance</code> message on the next LLM call: notice once per epoch, warning and forced on entry then every 4th call (blocked tool results already carry the forced reason).</li>
+        <li><code class="status">[x]</code> Add a static system-prompt line (never changes between calls) describing the transient guidance and the returned note.</li>
+        <li><code class="status">[x]</code> Handoff content is exactly the note; header and cycle live in the renderer and <code>details</code>; note shown on expand.</li>
+        <li><code class="status">[x]</code> One-line TUI phase entry per crossing; info toasts suppressed in the TUI; warnings and errors kept everywhere.</li>
+      </ul>
+      <h4>2. Footer</h4>
+      <ul class="checklist">
+        <li><code class="status">[x]</code> <code>ctx.ui.setFooter</code> renders one line: model id and cycle on the left, colored 20-cell bar with markers, percent, phase tag (or NOTE status, REJECTED, LOCKED) on the right, in the <code>minimal</code> style.</li>
+      </ul>
+      <h4>3. Testing Strategy</h4>
+      <ul class="checklist">
+        <li><code class="status">[x]</code> <code>bash scripts/tui-smoke.sh</code> — <code>verification/tui-footer.txt</code> shows the clean transcript and the footer <code>[###~#====!-|--------] 43% NOTICE</code>.</li>
+        <li><code class="status">[x]</code> lifecycle e2e asserts exactly one persisted user message and one persisted custom message (the handoff).</li>
+      </ul>
+      <div class="loop">🔁 <strong>Do not exit this phase until every box above is checked.</strong></div>
+    </div>
+
+    <div class="phase" id="phase-4">
+      <h3><code class="status">[x]</code> Phase 4: Harness and End-to-End Proof</h3>
+      <p>The scripted provider now emits sibling batches, reads past transient guidance, and detects the exact-note handoff.</p>
+      <h4>1. Suites</h4>
+      <ul class="checklist">
+        <li><code class="status">[x]</code> lifecycle: crossings inside one run, lock, self_compact, compaction with handoff id, verbatim note, result.txt, state ledger pending → compacting → ready → done, clean transcript.</li>
+        <li><code class="status">[x]</code> sibling batches: <code>[bash, self_compact]</code> and <code>[self_compact, bash]</code> both block the sibling and complete the handoff.</li>
+        <li><code class="status">[x]</code> failure-recovery: failing summarizer keeps note and lock through 3 retries; <code>/self-compact-now</code> carries the saved note; <code>--session</code> restart finishes the handoff; a further restart starts nothing.</li>
+        <li><code class="status">[x]</code> launch variants, rejections, untouched <code>/compact</code>, literal <code>--compact-prompt</code>.</li>
+        <li><code class="status">[x]</code> live claude-haiku-4-5: forced cutoff → 1,070-char note → compaction 17,224 → ~1,141 tokens → note returned verbatim → result.txt = done.</li>
+      </ul>
+      <h4>2. Testing Strategy</h4>
+      <ul class="checklist">
+        <li><code class="status">[x]</code> <code>SC_REAL=1 bash scripts/verify.sh</code> — 9/9 checks pass; <code>verification/REPORT.md</code> written.</li>
+      </ul>
+      <div class="loop">🔁 <strong>Do not exit this phase until every box above is checked.</strong></div>
+    </div>
+
+    <div class="phase" id="phase-5">
+      <h3><code class="status">[x]</code> Phase 5: Repository Consolidation</h3>
+      <p>One version, one launcher, docs for live viewing.</p>
+      <h4>1. Files</h4>
+      <ul class="checklist">
+        <li><code class="status">[x]</code> Remove <code>apps/glm-5-2</code> completely; keep every file under <code>specs/</code>.</li>
+        <li><code class="status">[x]</code> Rewrite the root <code>justfile</code>: <code>run</code> (soft 10%, warning 20%, hard cutoff 30%), <code>run-defaults</code>, <code>demo</code> (scripted zero-cost model), <code>test</code>, <code>e2e</code>, <code>real</code>, <code>verify</code>, <code>specs</code>.</li>
+        <li><code class="status">[x]</code> Move the previous versions to <code>tmp/previous-versions/</code> (gitignored, not referenced by any doc).</li>
+        <li><code class="status">[x]</code> <code>/meta-prime</code> → <code>.claude/commands/prime.md</code>; <code>/meta-readme</code> → root <code>README.md</code> with generated images; <code>LICENSE</code> (MIT).</li>
+      </ul>
+      <h4>2. Testing Strategy</h4>
+      <ul class="checklist">
+        <li><code class="status">[x]</code> <code>just --list</code> and <code>just -n run</code> — recipes resolve to <code>apps/self-compact</code>.</li>
+        <li><code class="status">[x]</code> <code>ls apps</code> — only <code>self-compact</code>.</li>
+      </ul>
+      <div class="loop">🔁 <strong>Do not exit this phase until every box above is checked.</strong></div>
+    </div>
+
+    <div class="phase" id="phase-6">
+      <h3><code class="status">[x]</code> Phase 6: Cross-Agent Validation</h3>
+      <p>astra-sc validates the merged app independently once Dan grants read access.</p>
+      <h4>1. Handshake</h4>
+      <ul class="checklist">
+        <li><code class="status">[x]</code> Send "READY FOR VALIDATION" with path and commands (message 35).</li>
+        <li><code class="status">[x]</code> astra-sc authorized (messages 38, 39), ran <code>scripts/verify.sh</code> (8/9 in their shell, lifecycle failed on the python3 stub, see F4) and reviewed the source (message 42: F5–F8 above, all accepted and fixed).</li>
+        <li><code class="status">[x]</code> astra-sc re-ran everything on the final source and replied (message 51): typecheck PASS, unit 30/30, independent probes 11/11, e2e 10/10, live model and TUI reviewed. Evidence: <code>apps/self-compact/verification/astra-review.md</code> and <code>astra-*-final.log</code>.</li>
+      </ul>
+      <h4>2. Testing Strategy</h4>
+      <ul class="checklist">
+        <li><code class="status">[x]</code> <code>mailbox await inbound 35 --agent fab-sc --from astra-sc</code> — per-command results received (message 51).</li>
+      </ul>
+      <div class="loop">🔁 <strong>Do not exit this phase until every box above is checked.</strong></div>
+    </div>
+  </section>
+
+  <section id="validation">
+    <h2>Validation Commands</h2>
+    <p>Execute from the repository root:</p>
+    <ul class="checklist">
+      <li><code class="status">[x]</code> <code>ls apps</code> — prints only <code>self-compact</code>.</li>
+      <li><code class="status">[x]</code> <code>just test</code> — unit suites green.</li>
+      <li><code class="status">[x]</code> <code>just e2e</code> — 9 e2e tests green through the real CLI.</li>
+      <li><code class="status">[x]</code> <code>just real</code> — live model resumes from its note; <code>apps/self-compact/verification/tmp/real-model/result.txt</code> is <code>done</code>.</li>
+      <li><code class="status">[x]</code> <code>just verify</code> — 9/9 checks; <code>apps/self-compact/verification/REPORT.md</code> updated.</li>
+      <li><code class="status">[x]</code> <code>just -n run</code> — expands to the merged entry with 10% / 20% / 10% flags.</li>
+      <li><code class="status">[x]</code> astra-sc's independent run of the same commands: typecheck, unit 30/30, probes 11/11, e2e 10/10 (message 51).</li>
+    </ul>
+    <div class="loop">🔁 <strong>The plan is not complete until every box is checked and every command passes. If for some reason a step is not possible to complete, mark it with [f] and move on if possible.</strong></div>
+  </section>
+
+  <section id="notes">
+    <h2>Notes</h2>
+    <h3>Decisions</h3>
+    <ul>
+      <li><strong>D1 Enforcement.</strong> tool_call-only lock with a reason naming <code>self_compact</code>. Narrowing the active tool list was tried in build A and dropped because Pi answers "Tool X not found" before the hook; astra-sc agreed once sibling coverage existed.</li>
+      <li><strong>D2 Guidance channel.</strong> Transient message via the <code>context</code> hook (astra-sc's F1) rather than the system prompt, because <code>before_agent_start</code> only fires once per run and a changing system prompt would break the prompt-cache prefix. Cadence: on entry, then every 4th call for warning and forced.</li>
+      <li><strong>D3 Handoff contract.</strong> Content is exactly the saved note (astra-sc's message 34); id and cycle in <code>details</code>; delivery only after <code>session_compact</code>; acknowledged on <code>message_end</code>; an answered handoff never restarts.</li>
+      <li><strong>D4 Nothing to compact.</strong> If Pi reports nothing to compact (for example it just compacted on its own threshold), the handoff completes immediately instead of retrying into the same error.</li>
+      <li><strong>D5 Dependencies.</strong> Zero npm dependencies: Pi's loader aliases its packages at runtime and Node 24 strips types for the tests. Build B's tsx-based suites were not carried over; their scenarios (sibling order, cancel/failure recovery, reload, manual compact) are covered by the RPC harness instead.</li>
+    </ul>
+    <h3>Findings during the merge</h3>
+    <ul>
+      <li><strong>F1</strong> Appending guidance on every call masked the last tool result for a model that only reads the tail of the context; real models cope, but the cadence change is better for prompt stability anyway.</li>
+      <li><strong>F2</strong> Pi's own threshold compaction can fire before the agent hands off; with the summary override both paths behave the same, and the "nothing to compact" completion covers the race.</li>
+      <li><strong>F3</strong> A fresh session reports 0% (not unknown) usage before any response; tests assert the bar body rather than the percent.</li>
+      <li><strong>F4</strong> astra-sc's first independent run failed the lifecycle suite because the scripted model's filler step used <code>python3</code>, which resolved to the Xcode license stub in their shell. The extension behaved correctly; the harness now uses a pure-shell filler and selects blocked tool results by reason text.</li>
+      <li><strong>F5</strong> (astra-sc review, message 42) A completed handoff still counted as a handoff, so guidance and the forced lock were disabled after the first cycle and the next cycle reused the old id. Fixed with <code>activeHandoff()</code>; covered by the two-cycle e2e.</li>
+      <li><strong>F6</strong> (astra-sc) The tool trimmed the note; the raw bytes are now stored and returned, and only the blank check trims. Covered by the whitespace note e2e.</li>
+      <li><strong>F7</strong> (astra-sc) A crash between journaling the handoff and the model's answer could never resume, and the resume path waited for a user prompt. The reducer now flags a journaled-but-unanswered handoff even when the state is already done, and recovery triggers the continuation turn itself. Covered by a truncated-session e2e.</li>
+      <li><strong>F8</strong> (astra-sc) A blocked sibling in the handoff batch did not terminate the batch, costing an extra model call. The sibling block now returns <code>terminate: true</code>; the sibling e2e asserts exactly two agent runs.</li>
+      <li><strong>F9</strong> (astra-sc probes, messages 44–46) The 500 ms deferred recovery callbacks were untracked, so a shutdown or <code>/tree</code> switch inside that window let them fire into a later session. All deferred work now goes through <code>deferInEpoch()</code> (alive + epoch guard) and <code>clearTimers()</code> runs on every recover and shutdown.</li>
+    </ul>
+    <h3>Cross-agent status</h3>
+    <p>astra-sc reviewed the design (messages 32 and 34), was authorized by Dan (messages 38 and 39), found the environmental harness issue (F4) and four source defects (F5–F8) plus the stale-timer defect (F9), and after the fixes validated the final source independently (message 51): typecheck PASS, unit 30/30, probes 11/11, e2e 10/10, live model and TUI reviewed. No remaining findings in the reviewed scope.</p>
+  </section>
+
+  <section id="amendments">
+    <h2>Amendments</h2>
+    <details>
+      <summary>2026-09-15T17:38:37Z — Adopted astra-sc's note-fidelity detail and the context-hook guidance channel</summary>
+      <p>Message 34 asked that the handoff message content equal the exact note; the header moved to the renderer and details. Message 32 (F1) argued that system-prompt-only guidance cannot reach a long tool loop mid-run; guidance moved to a transient message in the <code>context</code> hook.</p>
+    </details>
+    <details>
+      <summary>2026-09-15T17:43:46Z — Harness hardened after astra-sc's first independent run</summary>
+      <p>astra-sc's <code>verify.sh</code> run passed 8 of 9 checks (including the live model) and failed the lifecycle suite because <code>python3</code> in their shell was the Xcode license stub. The scripted model now uses a pure-shell filler and the e2e suites select blocked results by their reason text (<code>tests/harness/fake-provider.ts</code>, <code>tests/e2e/*.test.ts</code>). The extension was not changed. A fresh <code>SC_REAL=1 bash scripts/verify.sh</code> passed 9/9 and a re-run was requested from astra-sc.</p>
+    </details>
+    <details>
+      <summary>2026-09-15T17:50:23Z — Four source findings from astra-sc's review fixed (F5–F8)</summary>
+      <p>Message 42 reported: guidance and forced locking disabled after the first cycle, note whitespace trimmed, no resume after a crash between journaling and answering, and sibling blocks without <code>terminate</code>. All four were accepted and fixed in <code>self-compact.ts</code> and <code>state.ts</code>, each with a regression test (two cycles, whitespace note, truncated-session resume, two-run sibling assertion). Unit 30/30, e2e 10/10, live model and TUI green after the fixes.</p>
+    </details>
+    <details>
+      <summary>2026-09-15T17:53:32Z — Deferred recovery callbacks epoch-guarded (F9)</summary>
+      <p>astra-sc's independent probes (<code>verification/astra-regressions.test.mjs</code>) passed 9 of 11 after F5–F8, with the two failures both caused by untracked 500 ms recovery timers. <code>deferInEpoch()</code> and <code>clearTimers()</code> fix both; unit, e2e, live model, and TUI checks stayed green.</p>
+    </details>
+    <details>
+      <summary>2026-09-15T17:55:45Z — Independent validation complete (astra-sc, message 51)</summary>
+      <p>Final per-command results from astra-sc on the final source: typecheck PASS, unit 30/30, independent regression probes 11/11 (repeat cycles with fresh ids, whitespace preservation, both sibling orders terminating, journaled-unanswered continuation, answered-work suppression, shutdown and branch-switch timer cancellation, summary reasoningEffort), e2e 10/10, live model and TUI runs reviewed. No remaining findings.</p>
+    </details>
+  </section>
+
+</main>
+</body>
+</html>
