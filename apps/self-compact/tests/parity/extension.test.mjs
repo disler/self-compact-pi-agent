@@ -189,12 +189,12 @@ test('P2: native engine preserves split turns, previous summaries, budgets and f
   for (const { request, options } of h.requests) {
     assert.equal(request.systemPrompt, 'EXACT SYSTEM OVERRIDE');
     assert.equal(options.reasoningEffort, 'low');
-    assert.match(request.messages[0].content[0].text, /USER INSTRUCTIONS.*preserve evidence/);
-    assert.match(request.messages[0].content[0].text, /Keep the failing test name/);
-    assert.doesNotMatch(request.messages[0].content[0].text, /Use this EXACT format/);
+    assert.match(request.messages.at(-1).content[0].text, /USER INSTRUCTIONS.*preserve evidence/);
+    assert.match(request.messages.at(-1).content[0].text, /Keep the failing test name/);
+    assert.doesNotMatch(request.messages.at(-1).content[0].text, /Use this EXACT format/);
   }
-  assert.match(h.requests[0].request.messages[0].content[0].text, /<previous-summary>\nPrevious checkpoint/);
-  assert.match(h.requests[1].request.messages[0].content[0].text, /Continue parser tests/);
+  assert.match(h.requests[0].request.messages.at(-1).content[0].text, /<previous-summary>\nPrevious checkpoint/);
+  assert.match(h.requests[1].request.messages.at(-1).content[0].text, /Continue parser tests/);
   assert.match(result.compaction.summary, /Turn Context \(split turn\)/);
   assert.deepEqual(result.compaction.details.readFiles, ['README.md']);
   assert.deepEqual(result.compaction.details.modifiedFiles, ['parser.ts']);
