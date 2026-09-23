@@ -57,6 +57,16 @@ function historyInput(messages: SessionBeforeCompactEvent["preparation"]["messag
 	return `<conversation>\n${conversation}\n</conversation>\n\n${previous ? `<previous-summary>\n${previous}\n</previous-summary>\n\n` : ""}`;
 }
 
+/**
+ * Pi >= 0.87 renders the turn-prefix summary prompt with markdown headers instead of <conversation>
+ * tags: "# Conversation\n{conv}\n\n# Instructions\n{prompt}". The older <conversation> form is kept
+ * as a candidate so both shapes are recognized.
+ */
+function turnPrefixInput(messages: SessionBeforeCompactEvent["preparation"]["turnPrefixMessages"]): string {
+	const conversation = serializeConversation(convertToLlm(messages));
+	return `# Conversation\n${conversation}\n\n# Instructions\n`;
+}
+
 function summaryInstructions(event: SessionBeforeCompactEvent, prompt: LoadedPrompt): string {
 	return [
 		"Summarize the supplied historical data. Do not continue the task, simulate tools, or claim actions without tool-result evidence. Keep pending actions pending.",
@@ -92,7 +102,11 @@ function replaceInstructions(context: Context, inputs: string[], instructions: s
 /** Pi owns split turns, summary updates, file tracking and configured transport retries. */
 export async function generateSummary(event: SessionBeforeCompactEvent, ctx: ExtensionContext, system: LoadedPrompt, instructions: LoadedPrompt) {
 	if (!ctx.model) throw new Error("No model available for compaction.");
-	const inputs = [historyInput(event.preparation.messagesToSummarize, event.preparation.previousSummary), historyInput(event.preparation.turnPrefixMessages)].sort((a, b) => b.length - a.length);
+	const inputs = [
+		historyInput(event.preparation.messagesToSummarize, event.preparation.previousSummary),
+		historyInput(event.preparation.turnPrefixMessages),
+		turnPrefixInput(event.preparation.turnPrefixMessages),
+	].sort((a, b) => b.length - a.length);
 	const userInstructions = summaryInstructions(event, instructions);
 	let truncatedInput = false;
 	const result = await compact(
