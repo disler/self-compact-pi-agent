@@ -7,7 +7,10 @@ import { tmpdir } from 'node:os';
 import { pathToFileURL } from 'node:url';
 
 const globalModules = execFileSync('npm', ['root', '-g'], { encoding: 'utf8' }).trim();
-const { loadExtensions } = await import(pathToFileURL(join(globalModules, '@earendil-works/pi-coding-agent/dist/core/extensions/loader.js')));
+// PI_LOADER_PATH overrides the loader location for images that run Pi from a source build
+// (e.g. /opt/pi) instead of an npm-global install.
+const loaderPath = process.env.PI_LOADER_PATH ?? join(globalModules, '@earendil-works/pi-coding-agent/dist/core/extensions/loader.js');
+const { loadExtensions } = await import(pathToFileURL(loaderPath));
 const entry = resolve('extensions/self-compact/self-compact.ts');
 
 function seedEntries(chars = 2000) {
@@ -68,6 +71,13 @@ async function host(t, flags = {}, settings = { compaction: { keepRecentTokens: 
     footer: () => footer({ requestRender() {} }, { fg: (_color, text) => text, bold: text => text }).render(100)[0],
   };
 }
+
+/** The user summary prompt text of a request. Pi >= 0.87 prepends the system message to messages, so look the user message up by role. */
+const userText = (request) => {
+  const user = request.messages.find((m) => m.role === 'user');
+  const content = user ? user.content : null;
+  return typeof content === 'string' ? content : content[0].text;
+};
 
 function summaryEvent(overrides = {}) {
   return {
@@ -189,12 +199,12 @@ test('P2: native engine preserves split turns, previous summaries, budgets and f
   for (const { request, options } of h.requests) {
     assert.equal(request.systemPrompt, 'EXACT SYSTEM OVERRIDE');
     assert.equal(options.reasoningEffort, 'low');
-    assert.match(request.messages[0].content[0].text, /USER INSTRUCTIONS.*preserve evidence/);
-    assert.match(request.messages[0].content[0].text, /Keep the failing test name/);
-    assert.doesNotMatch(request.messages[0].content[0].text, /Use this EXACT format/);
+    assert.match(userText(request), /USER INSTRUCTIONS.*preserve evidence/);
+    assert.match(userText(request), /Keep the failing test name/);
+    assert.doesNotMatch(userText(request), /Use this EXACT format/);
   }
-  assert.match(h.requests[0].request.messages[0].content[0].text, /<previous-summary>\nPrevious checkpoint/);
-  assert.match(h.requests[1].request.messages[0].content[0].text, /Continue parser tests/);
+  assert.match(userText(h.requests[0].request), /<previous-summary>\nPrevious checkpoint/);
+  assert.match(userText(h.requests[1].request), /Continue parser tests/);
   assert.match(result.compaction.summary, /Turn Context \(split turn\)/);
   assert.deepEqual(result.compaction.details.readFiles, ['README.md']);
   assert.deepEqual(result.compaction.details.modifiedFiles, ['parser.ts']);
