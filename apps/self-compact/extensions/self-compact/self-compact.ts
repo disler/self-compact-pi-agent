@@ -17,17 +17,20 @@
  *   returned verbatim as a handoff message (shown in full) that starts the next turn. When Pi would find nothing to
  *   compact (the session fits inside keepRecentTokens) the tool refuses instead of saving a note and locking.
  * - Failure or cancellation keeps the note and the lock; retries, /self-compact-now, reload and /tree recovery.
- * - One-line replacement footer: model id on the left, the 20-cell context bar and phase on the right.
+ * - Context bar integrates into the existing footer line: this extension publishes plain bar data
+ *   (cells/label/tag) to a JSON state file (~/.pi/agent/extensions/.state/self-compact.json) and
+ *   custom-footer.ts, which owns setFooter here, renders it right-aligned. No setFooter, no extra line.
  *
  * Merged from the claude-fable-5-1 and gpt-6-astra implementations (see specs/self-compact-merge.html).
  */
 import { randomUUID } from "node:crypto";
-import { dirname } from "node:path";
+import { mkdirSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { ExtensionAPI, ExtensionCommandContext, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { generateSummary, hasCompactionMaterial, keepRecentTokens } from "./summary.ts";
 import type { AssistantMessage } from "@earendil-works/pi-ai";
-import { Text, truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
+import { Text } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
 import { formatPct, formatTokens, renderContextBar } from "./context-bar.ts";
 import {
@@ -68,6 +71,9 @@ export const TOOL_NAME = "self_compact";
 export const VIEW_TOOL_NAME = "view_context";
 export { HANDOFF_TYPE, STATE_TYPE };
 const EXTENSION_DIR = dirname(fileURLToPath(import.meta.url));
+/** Shared state for footer integrations: custom-footer.ts renders this as a segment on its line.
+ * The env override keeps tests from writing into the deployed extensions tree. */
+const barStateFile = (): string => process.env.SELF_COMPACT_BAR_STATE_FILE ?? join(EXTENSION_DIR, "..", ".state", "self-compact.json");
 const MAX_AUTO_RETRIES = 3;
 const SUMMARY_ATTEMPTS = 2;
 const GUIDANCE_TYPE = "self-compact-guidance";
@@ -112,7 +118,7 @@ interface Runtime {
 function nowPrompt(saved?: string): string {
 	const base = `Compact now: write your note_to_self (max ${NOTE_MAX_CHARS} chars: goal, DONE with exact paths and commands, IN PROGRESS, key decisions, verified test results, exact NEXT ACTION last) and call ${TOOL_NAME} as your only tool call.`;
 	if (!saved) return base;
-	return `${base}\n\nA note is already saved from a previous attempt. Pass it to ${TOOL_NAME} verbatim instead of inventing a new one. Saved note, verbatim:\n\n${saved}\n\n---\nCall ${TOOL_NAME} now with exactly that note.`;
+	return `${base}\n\nA note is already saved from a previous attempt. Call ${TOOL_NAME} again (any note_to_self text) to retry with the saved note, or pass replace: true with a new note_to_self to overwrite it. Saved note:\n\n${saved}\n\n---\nCall ${TOOL_NAME} now.`;
 }
 
 function guidanceMessage(text: string) {
@@ -303,8 +309,42 @@ export default function selfCompact(pi: ExtensionAPI) {
 	function refreshUi(ctx: ExtensionContext) {
 		R.usage = snapshotUsage(ctx);
 		R.level = R.thresholds ? levelFor(R.usage.tokens, R.thresholds) : "unknown";
-		if (ctx.mode === "tui") R.requestRender?.();
-		else if (ctx.hasUI) ctx.ui.setStatus("self-compact", [contextBarText(), statusTag()].filter(Boolean).join(" "));
+		if (ctx.mode === "tui") {
+			writeBarState();
+			R.requestRender?.();
+		} else if (ctx.hasUI) ctx.ui.setStatus("self-compact", [contextBarText(), statusTag()].filter(Boolean).join(" "));
+	}
+
+	/** Publish the bar segment for custom-footer.ts (the setFooter owner). Plain data, no ANSI. */
+	function writeBarState() {
+		try {
+			const t = R.thresholds;
+			if (!t) return;
+			const u = R.usage;
+			const bar = renderContextBar({
+				usedPct: u.percent,
+				cachedPct: u.window > 0 ? (u.cachedTokens / u.window) * 100 : 0,
+				softPct: t.softPct,
+				warnPct: t.warnPct,
+				forcedPct: t.forcedPct,
+			});
+			const tag = statusTag();
+			const data = {
+				version: 1,
+				writtenAt: Date.now(),
+				cells: bar.bar,
+				label: bar.label,
+				tag,
+				tagColor: inert() || locked() ? "error" : levelColor(R.level),
+				cycle: R.state.cycle,
+				level: R.level,
+			};
+			const path = barStateFile();
+			mkdirSync(dirname(path), { recursive: true });
+			writeFileSync(path, JSON.stringify(data));
+		} catch {
+			// State file is best-effort display glue; never break the extension over it.
+		}
 	}
 
 	/**
@@ -508,7 +548,7 @@ export default function selfCompact(pi: ExtensionAPI) {
 	pi.registerTool({
 		name: TOOL_NAME,
 		label: "Self Compact",
-		description: `Hand off to yourself across a context compaction. Provide note_to_self (1 to ${NOTE_MAX_CHARS} characters): the goal, DONE work with exact file paths and commands, IN PROGRESS state, key decisions, verified test results, and the exact NEXT ACTION as the last line. Call it alone in a tool batch. The note is saved, this run ends, the context is compacted once you are idle, and the note is returned verbatim so you continue from NEXT ACTION. At the hard cutoff every other tool is blocked until this succeeds.`,
+		description: `Hand off to yourself across a context compaction. Provide note_to_self (1 to ${NOTE_MAX_CHARS} characters): the goal, DONE work with exact file paths and commands, IN PROGRESS state, key decisions, verified test results, and the exact NEXT ACTION as the last line. Call it alone in a tool batch. The note is saved, this run ends, the context is compacted once you are idle, and the note is returned verbatim so you continue from NEXT ACTION. At the hard cutoff every other tool is blocked until this succeeds. If a note is already saved (e.g. after a failed compaction), calling again retries with the saved note even when note_to_self differs; pass replace: true to overwrite the saved note.`,
 		promptSnippet: "Compact your own context: save a note_to_self, compaction runs when the turn ends, the note comes back verbatim",
 		promptGuidelines: [
 			`Use ${TOOL_NAME} alone in a tool batch when a [self-compact · …] message asks you to compact, or at a clean checkpoint when context is high.`,
@@ -517,6 +557,11 @@ export default function selfCompact(pi: ExtensionAPI) {
 		],
 		parameters: Type.Object({
 			note_to_self: Type.String({ description: `Your handoff note (1-${NOTE_MAX_CHARS} chars). Ends with the exact NEXT ACTION.` }),
+			replace: Type.Optional(
+				Type.Boolean({
+					description: `Overwrite the saved note with note_to_self when one is already saved. Default false: a call whose note differs from the saved one retries with the saved note instead, so a failed compaction can be retried without reproducing the note byte for byte.`,
+				}),
+			),
 		}),
 		async execute(_toolCallId, params, signal, _onUpdate, ctx) {
 			if (signal?.aborted) throw new Error("Self-compaction cancelled before saving the note.");
@@ -533,21 +578,29 @@ export default function selfCompact(pi: ExtensionAPI) {
 				const keep = keepRecentTokens(ctx.cwd);
 				throw new Error(`Nothing to compact yet: Pi keeps the newest ${keep.toLocaleString("en-US")} tokens of messages untouched and this session does not reach past them (context ${R.usage.tokens?.toLocaleString("en-US") ?? "?"} tokens, ${formatPct(R.usage.percent, 1)}). No note was saved and no tool is blocked. Keep working and call ${TOOL_NAME} later.`);
 			}
-			if (existing && existing.note.trim() !== raw.trim()) {
-				throw new Error(`A note is already saved (${existing.note.length} chars). Retry ${TOOL_NAME} with that saved note verbatim instead of a new one.`);
+			// Byte-exact reproduction of a long saved note is unreliable, so a mismatching call
+			// reuses the saved note (the wedge escape) unless replace: true overwrites it.
+			let reusedSavedNote = false;
+			if (existing && existing.note.trim() !== raw.trim() && params.replace !== true) {
+				R.state.handoff = { ...existing, status: "pending", attempts: 0, error: undefined };
+				reusedSavedNote = true;
+			} else {
+				// A verbatim retry keeps the original bytes; replace or a new cycle gets a fresh durable id.
+				const fresh = !existing || (existing.note.trim() !== raw.trim() && params.replace === true);
+				const note = fresh ? raw : existing.note;
+				R.state.handoff = { id: fresh ? randomUUID() : existing.id, note, status: "pending", attempts: 0, savedAt: Date.now() };
 			}
-			// A retry keeps the original bytes; a new cycle gets a fresh durable id.
-			const note = existing ? existing.note : raw;
-			R.state.handoff = { id: existing?.id ?? randomUUID(), note, status: "pending", attempts: 0, savedAt: Date.now() };
+			const handoffNow = R.state.handoff!;
 			R.lastCompactionError = undefined;
 			setLocked(true);
 			save();
 			refreshUi(ctx);
-			notify(ctx, `self-compact: note saved (${note.length} chars). Compaction runs when this turn ends.`, "info");
+			notify(ctx, `self-compact: note saved (${handoffNow.note.length} chars). Compaction runs when this turn ends.`, "info");
 			const at = R.usage.tokens === null ? "unknown usage" : `${R.usage.tokens.toLocaleString("en-US")} tokens (${formatPct(R.usage.percent, 1)}), level ${R.level}`;
+			const reuseNotice = reusedSavedNote ? `Reusing the note saved earlier (${handoffNow.note.length} chars); the differing note_to_self was discarded. Pass replace: true to overwrite the saved note. ` : "";
 			return {
-				content: [{ type: "text", text: `Note saved (${note.length} chars) at ${at}. Every other tool is blocked until compaction succeeds. Stop now: compaction runs when this turn ends and your note will be returned verbatim.` }],
-				details: { handoffId: R.state.handoff.id, noteChars: note.length, cycle: R.state.cycle + 1, note, usedTokens: R.usage.tokens, usedPercent: R.usage.percent, level: R.level },
+				content: [{ type: "text", text: `${reuseNotice}Note saved (${handoffNow.note.length} chars) at ${at}. Every other tool is blocked until compaction succeeds. Stop now: compaction runs when this turn ends and your note will be returned verbatim.` }],
+				details: { handoffId: handoffNow.id, noteChars: handoffNow.note.length, cycle: R.state.cycle + 1, note: handoffNow.note, usedTokens: R.usage.tokens, usedPercent: R.usage.percent, level: R.level },
 				terminate: true,
 			};
 		},
@@ -629,46 +682,11 @@ export default function selfCompact(pi: ExtensionAPI) {
 		return new Text([theme.fg("accent", theme.bold(title ?? "self-compact info")), ...rest.map((l) => theme.fg("text", l))].join("\n"), 0, 0);
 	});
 
-	function installFooter(ctx: ExtensionContext) {
-		if (ctx.mode !== "tui") return;
-		ctx.ui.setFooter((tui, theme) => {
-			R.requestRender = () => tui.requestRender();
-			return {
-				dispose: () => {
-					R.requestRender = undefined;
-				},
-				invalidate() {},
-				render(width: number): string[] {
-					const t = R.thresholds;
-					const u = R.usage;
-					const level = R.level;
-					const bar = renderContextBar({
-						usedPct: t ? u.percent : null,
-						cachedPct: u.window > 0 ? (u.cachedTokens / u.window) * 100 : 0,
-						softPct: t?.softPct ?? 0,
-						warnPct: t?.warnPct ?? 0,
-						forcedPct: t?.forcedPct ?? 0,
-					});
-					const cells = bar.cells
-						.map((c) => {
-							if (c === "#") return theme.fg("success", c);
-							if (c === "=") return theme.fg("accent", c);
-							if (c === "~") return theme.fg("muted", c);
-							if (c === "!") return theme.fg("warning", c);
-							if (c === "|") return theme.fg("error", c);
-							return theme.fg("dim", c);
-						})
-						.join("");
-					const problem = inert();
-					const tag = statusTag();
-					const left = theme.fg("dim", ` ${ctx.model?.id ?? "no-model"}`) + (R.state.cycle > 0 ? theme.fg("dim", ` · cycle ${R.state.cycle}`) : "");
-					const phase = tag ? ` ${theme.fg(problem ? "error" : locked() ? "error" : levelColor(level), tag)}` : "";
-					const right = `${theme.fg("dim", "[")}${cells}${theme.fg("dim", `] ${bar.label}`)}${phase} `;
-					const pad = " ".repeat(Math.max(1, width - visibleWidth(left) - visibleWidth(right)));
-					return [truncateToWidth(left + pad + right, width)];
-				},
-			};
-		});
+	function installFooter(_ctx: ExtensionContext) {
+		// Additive integration: no setFooter (that would evict custom-footer.ts) and no
+		// extra widget line. The bar is written to the shared state file (see barStateFile)
+		// and rendered on the existing footer line by custom-footer.ts, which owns
+		// ctx.ui.setFooter here.
 	}
 
 	// ---------------------------------------------------------------- events

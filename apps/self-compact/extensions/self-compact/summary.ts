@@ -66,33 +66,53 @@ function summaryInstructions(event: SessionBeforeCompactEvent, prompt: LoadedPro
 	].filter(Boolean).join("\n\n");
 }
 
+/**
+ * Pi ≥0.87.1 wraps the turn-prefix history as `# Conversation … # Instructions` instead of
+ * <conversation> tags (generateTurnPrefixSummary changed). Both shapes are candidates, so a
+ * split-turn compaction works on either side of that pi change.
+ */
+function turnPrefixInput(messages: SessionBeforeCompactEvent["preparation"]["turnPrefixMessages"]): string {
+	const conversation = serializeConversation(convertToLlm(messages));
+	return `# Conversation\n${conversation}\n\n# Instructions\n`;
+}
+
 /** Match complete known inputs, so tag-like text inside history cannot cut the conversation short. */
 function replaceInstructions(context: Context, inputs: string[], instructions: string, budgetChars: number) {
 	let truncated = false;
-	const messages = context.messages.map(message => {
-		if (message.role !== "user") return message;
-		const content = typeof message.content === "string" ? [{ type: "text" as const, text: message.content }] : message.content;
-		return {
-			...message,
-			content: content.map(block => {
-				if (block.type !== "text") return block;
-				let input = inputs.find(candidate => block.text.startsWith(candidate));
-				if (input === undefined) throw new Error("Unrecognized Pi summary input; cannot replace instructions safely.");
-				if (input.length > budgetChars) {
-					input = `[earlier conversation truncated to fit summary budget]\n${input.slice(-budgetChars)}`;
-					truncated = true;
-				}
-				return { ...block, text: `${input}${instructions}` };
-			}),
-		};
-	});
+	// Newer pi-ai normalizeContext injects systemPrompt as a system-role message; the extension
+	// supplies its own systemPrompt, so pi's duplicate must not ride along.
+	const messages = context.messages
+		.filter(message => message.role !== "system")
+		.map(message => {
+			if (message.role !== "user") return message;
+			const content = typeof message.content === "string" ? [{ type: "text" as const, text: message.content }] : message.content;
+			return {
+				...message,
+				content: content.map(block => {
+					if (block.type !== "text") return block;
+					let input = inputs.find(candidate => block.text.startsWith(candidate));
+					if (input === undefined) throw new Error("Unrecognized Pi summary input; cannot replace instructions safely.");
+					if (input.length > budgetChars) {
+						input = `[earlier conversation truncated to fit summary budget]\n${input.slice(-budgetChars)}`;
+						truncated = true;
+					}
+					return { ...block, text: `${input}${instructions}` };
+				}),
+			};
+		});
 	return { messages, truncated };
 }
 
 /** Pi owns split turns, summary updates, file tracking and configured transport retries. */
 export async function generateSummary(event: SessionBeforeCompactEvent, ctx: ExtensionContext, system: LoadedPrompt, instructions: LoadedPrompt) {
 	if (!ctx.model) throw new Error("No model available for compaction.");
-	const inputs = [historyInput(event.preparation.messagesToSummarize, event.preparation.previousSummary), historyInput(event.preparation.turnPrefixMessages)].sort((a, b) => b.length - a.length);
+	// Candidates cover both pi turn-prefix formats: <conversation> tags (pi ≤0.87.0, produced by
+	// historyInput) and `# Conversation … # Instructions` (pi ≥0.87.1, produced by turnPrefixInput).
+	const inputs = [
+		historyInput(event.preparation.messagesToSummarize, event.preparation.previousSummary),
+		historyInput(event.preparation.turnPrefixMessages),
+		turnPrefixInput(event.preparation.turnPrefixMessages),
+	].sort((a, b) => b.length - a.length);
 	const userInstructions = summaryInstructions(event, instructions);
 	let truncatedInput = false;
 	const result = await compact(

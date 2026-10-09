@@ -17,19 +17,22 @@ async function info(client: RpcClient): Promise<{ text: string; events: RpcEvent
 	return { text: String(notify.message), events: client.events.slice(since) };
 }
 
-test("launch 1: defaults on a 1M model resolve to 100k / 200k / 300k (10% / 20% / 30%); info starts no LLM turn", async () => {
+test("launch 1: defaults on a 1M model resolve to 600k / 800k / 900k (60% / 80% / 90%); info starts no LLM turn", async () => {
 	const t = makeTestDir("launch-defaults");
+	// fake/scripted with SC_FAKE_WINDOW=1000000: a deterministic 1M window that does not depend
+	// on the installed pi's built-in model data (the registry's claude-sonnet-4-5 window changed
+	// between pi versions and broke the anthropic-model variant of this test).
 	const client = new RpcClient({
-		args: scriptedArgs(t, ["--model", "anthropic/claude-sonnet-4-5"]),
+		args: scriptedArgs(t),
 		cwd: t.dir,
-		env: DEFAULT_FAKE_ENV,
+		env: { ...DEFAULT_FAKE_ENV, SC_FAKE_WINDOW: "1000000" },
 		logFile: t.logFile,
 	});
 	try {
 		const { text, events } = await info(client);
-		assert.match(text, /--compact-soft-at 10% \(default\), --compact-at 20% \(default\), --compact-buffer 10% \(default\), --compact-prompt unset/);
+		assert.match(text, /--compact-soft-at 60% \(default\), --compact-at 80% \(default\), --compact-buffer 10% \(default\), --compact-prompt unset/);
 		assert.match(text, /window 1,000,000 tokens, cap 900,000/);
-		assert.match(text, /resolved: soft 100,000 \(10\.0%\), warning 200,000 \(20\.0%\), buffer 100,000, forced 300,000 \(30\.0%\)/);
+		assert.match(text, /resolved: soft 600,000 \(60\.0%\), warning 800,000 \(80\.0%\), buffer 100,000, forced 900,000 \(90\.0%\)/);
 		assert.match(text, /prompts: soft .*USER_PROMPT_SOFT_SELF_COMPACT\.md \(\d+ chars\), warning .*USER_PROMPT_WARNING_SELF_COMPACT\.md \(\d+ chars\), compaction .*USER_PROMPT_COMPACTION_MESSAGE\.md \(\d+ chars\)/);
 		assert.match(text, /state: level (idle|unknown), tools unlocked, handoff none, attempts 0/);
 		assert.match(text, /cycles completed: 0/);
@@ -43,9 +46,9 @@ test("launch 1: defaults on a 1M model resolve to 100k / 200k / 300k (10% / 20% 
 test("launch 2: 100k / 200k / 50k on a 1M model -> 10% / 20% / 25% markers", async () => {
 	const t = makeTestDir("launch-tokens");
 	const client = new RpcClient({
-		args: scriptedArgs(t, ["--model", "anthropic/claude-sonnet-4-5", "--compact-soft-at", "100k", "--compact-at", "200k", "--compact-buffer", "50k"]),
+		args: scriptedArgs(t, ["--compact-soft-at", "100k", "--compact-at", "200k", "--compact-buffer", "50k"]),
 		cwd: t.dir,
-		env: DEFAULT_FAKE_ENV,
+		env: { ...DEFAULT_FAKE_ENV, SC_FAKE_WINDOW: "1000000" },
 		logFile: t.logFile,
 	});
 	try {

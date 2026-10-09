@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, readFileSync, writeFileSync, rmSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 import { pathToFileURL } from 'node:url';
@@ -30,7 +30,9 @@ async function host(t, flags = {}, settings = { compaction: { keepRecentTokens: 
   const extension = loaded.extensions[0];
   const entries = seedEntries(), messages = [], notices = [], compactions = [], requests = [];
   let tokens = 0;
-  let footer;
+  let footerCalls = 0;
+  const barStateFile = join(cwd, 'bar-state.json');
+  process.env.SELF_COMPACT_BAR_STATE_FILE = barStateFile;
   for (const [key, value] of Object.entries({ 'compact-soft-at': '20%', 'compact-at': '50%', 'compact-buffer': '10%', ...flags })) loaded.runtime.flagValues.set(key, value);
   loaded.runtime.appendEntry = (customType, data) => entries.push({ type: 'custom', customType, data });
   loaded.runtime.sendMessage = (message, options) => messages.push({ ...message, options });
@@ -41,7 +43,7 @@ async function host(t, flags = {}, settings = { compaction: { keepRecentTokens: 
     getContextUsage: () => ({ tokens, contextWindow: ctx.model.contextWindow, percent: tokens / ctx.model.contextWindow * 100 }),
     isIdle: () => true,
     compact: options => compactions.push(options),
-    ui: { notify: (message, type) => notices.push({ message, type }), setFooter: factory => { footer = factory; }, setStatus() {} },
+    ui: { notify: (message, type) => notices.push({ message, type }), setFooter: () => { footerCalls += 1; }, setStatus() {} },
     modelRegistry: { complete: async (_model, request, options) => {
       requests.push({ request, options });
       return { role: 'assistant', api: 'openai-completions', provider: 'fake', model: 'parity-model', timestamp: 1, stopReason: 'stop', content: [{ type: 'text', text: 'Verified summary.' }], usage: { input: 10, output: 10, totalTokens: 20, cacheRead: 0, cacheWrite: 0, cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 } } };
@@ -65,7 +67,8 @@ async function host(t, flags = {}, settings = { compaction: { keepRecentTokens: 
     execute: (note = 'NEXT ACTION: continue', signal) => extension.tools.get('self_compact').definition.execute('call', { note_to_self: note }, signal, undefined, ctx),
     view: () => extension.tools.get('view_context').definition.execute('view', {}, undefined, undefined, ctx),
     info: () => extension.commands.get('self-compact-info').handler('', ctx),
-    footer: () => footer({ requestRender() {} }, { fg: (_color, text) => text, bold: text => text }).render(100)[0],
+    footerCalls: () => footerCalls,
+    barState: () => JSON.parse(readFileSync(barStateFile, 'utf8')),
   };
 }
 
@@ -168,13 +171,28 @@ test('P1: Nothing to compact is a failure, never a successful note delivery', as
   assert.equal(h.messages.length, 0);
 });
 
-test('Footer keeps context percentage and useful phases without idle ok', async t => {
+test('Footer integration: the bar is published to the shared state file; the extension never calls setFooter', async t => {
   const h = await host(t);
-  assert.match(h.footer(), /\] 0%\s*$/);
-  assert.doesNotMatch(h.footer(), /\bok\b/);
-  h.usage(45000);
+  h.usage(45000); // 22.5% of the 200k window, past the 20% soft line
   await h.emit('turn_end');
-  assert.match(h.footer(), /NOTICE/);
+  assert.equal(h.footerCalls(), 0, 'additive integration: custom-footer.ts owns setFooter');
+  const state = h.barState();
+  assert.equal(state.version, 1);
+  assert.ok(typeof state.writtenAt === 'number');
+  assert.equal(state.label, '23%');
+  assert.equal(state.level, 'notice');
+  assert.equal(state.tag, 'NOTICE');
+  assert.ok(typeof state.cells === 'string' && state.cells.length === 20, 'cells is the joined bar string');
+  assert.ok(state.cells.includes('~'), 'soft marker at 20%');
+  assert.ok(state.cells.includes('='), 'used cells');
+  // The state is re-published on every refresh, not just once at start
+  await new Promise(r => setTimeout(r, 5));
+  h.usage(100000); // 50% = warning line
+  await h.emit('turn_end');
+  const later = h.barState();
+  assert.ok(later.writtenAt >= state.writtenAt);
+  assert.equal(later.level, 'warning');
+  assert.equal(later.tag, 'WARNING');
 });
 
 test('P2: native engine preserves split turns, previous summaries, budgets and file metadata', async t => {
@@ -186,15 +204,23 @@ test('P2: native engine preserves split turns, previous summaries, budgets and f
   assert.ok(result.compaction);
   assert.equal(h.requests.length, 2);
   assert.deepEqual(h.requests.map(({ options }) => options.maxTokens), [800, 500]);
+  // pi-ai's normalizeContext injects the system prompt as a system-role message, so the summary
+  // user message is located by role, not index.
+  const userText = request => {
+    const users = request.messages.filter(message => message.role === 'user');
+    assert.equal(users.length, 1);
+    const content = users[0].content;
+    return Array.isArray(content) ? content.map(block => block.text ?? '').join('\n') : content;
+  };
   for (const { request, options } of h.requests) {
     assert.equal(request.systemPrompt, 'EXACT SYSTEM OVERRIDE');
     assert.equal(options.reasoningEffort, 'low');
-    assert.match(request.messages[0].content[0].text, /USER INSTRUCTIONS.*preserve evidence/);
-    assert.match(request.messages[0].content[0].text, /Keep the failing test name/);
-    assert.doesNotMatch(request.messages[0].content[0].text, /Use this EXACT format/);
+    assert.doesNotMatch(userText(request), /Use this EXACT format/);
   }
-  assert.match(h.requests[0].request.messages[0].content[0].text, /<previous-summary>\nPrevious checkpoint/);
-  assert.match(h.requests[1].request.messages[0].content[0].text, /Continue parser tests/);
+  assert.match(userText(h.requests[0].request), /USER INSTRUCTIONS.*preserve evidence/);
+  assert.match(userText(h.requests[0].request), /Keep the failing test name/);
+  assert.match(userText(h.requests[0].request), /<previous-summary>\nPrevious checkpoint/);
+  assert.match(userText(h.requests[1].request), /Continue parser tests/);
   assert.match(result.compaction.summary, /Turn Context \(split turn\)/);
   assert.deepEqual(result.compaction.details.readFiles, ['README.md']);
   assert.deepEqual(result.compaction.details.modifiedFiles, ['parser.ts']);

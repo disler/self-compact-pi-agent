@@ -32,17 +32,19 @@ test("parseTokenSpec rejects invalid values", () => {
 	}
 });
 
-test("shipped defaults are 10% / 20% / 30%: on a 1,000,000-token window they resolve to 100k / 200k / 300k", () => {
-	assert.deepEqual(DEFAULT_SPECS, { softAt: "10%", at: "20%", buffer: "10%" });
+test("shipped defaults are 60% / 80% / 90%: on a 1,000,000-token window they resolve to 600k / 800k / 900k", () => {
+	assert.deepEqual(DEFAULT_SPECS, { softAt: "60%", at: "80%", buffer: "10%" });
 	const t = resolveOk(DEFAULT_SPECS, MILLION, true);
-	assert.equal(t.softTokens, 100_000);
-	assert.equal(t.warnTokens, 200_000);
+	assert.equal(t.softTokens, 600_000);
+	assert.equal(t.warnTokens, 800_000);
 	assert.equal(t.bufferTokens, 100_000);
-	assert.equal(t.forcedTokens, 300_000);
+	assert.equal(t.forcedTokens, 900_000);
 	assert.equal(t.clamped, false);
-	const small = resolveOk(DEFAULT_SPECS, 128_000, true);
-	assert.equal(small.forcedTokens, 38_400);
-	assert.equal(small.clamped, false);
+	const quarter = resolveOk(DEFAULT_SPECS, 250_000, true);
+	assert.equal(quarter.softTokens, 150_000);
+	assert.equal(quarter.warnTokens, 200_000);
+	assert.equal(quarter.forcedTokens, 225_000);
+	assert.equal(quarter.clamped, false);
 });
 
 test("token launch 100k / 200k / 50k on 1M resolves to 100k / 200k / 250k (10% / 20% / 25%)", () => {

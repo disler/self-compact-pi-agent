@@ -21,7 +21,7 @@ export interface ThresholdSpecs {
 	buffer: string;
 }
 
-export const DEFAULT_SPECS: ThresholdSpecs = { softAt: "10%", at: "20%", buffer: "10%" };
+export const DEFAULT_SPECS: ThresholdSpecs = { softAt: "60%", at: "80%", buffer: "10%" };
 
 /** The hard cutoff never sits above this fraction of the model window. */
 export const HARD_CAP_FRACTION = 0.9;

@@ -21,7 +21,7 @@
  */
 import { appendFileSync } from "node:fs";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import { createAssistantMessageEventStream } from "@earendil-works/pi-ai";
+import { createAssistantMessageEventStream, getCurrentTools } from "@earendil-works/pi-ai";
 import type { AssistantMessage, Context, Model, SimpleStreamOptions } from "@earendil-works/pi-ai";
 
 const env = (key: string, fallback: string) => process.env[key] ?? fallback;
@@ -211,17 +211,22 @@ function streamScripted(model: Model<any>, context: Context, options?: SimpleStr
 		stopReason: "pending",
 		timestamp: Date.now(),
 	};
-	const isSummary = !context.tools || context.tools.length === 0;
+	// pi >=0.87 passes providers a TranscriptContext: system prompt and tools are folded
+	// into a leading system message (normalizeContext). Resolve the live toolset from the transcript.
+	const transcriptTools = getCurrentTools(context.messages);
+	const initialSystem = context.messages[0]?.role === "system" ? String(context.messages[0].content ?? "") : "";
+	trace({ kind: "ctx-shape", toolCount: transcriptTools.length, keys: Object.keys(context ?? {}), sysLen: initialSystem.length });
+	const isSummary = transcriptTools.length === 0;
 	setTimeout(() => {
 		try {
 			stream.push({ type: "start", partial: output });
 			if (isSummary) {
 				summaryCalls += 1;
-				trace({ kind: "summary", call: summaryCalls, systemPrompt: context.systemPrompt?.slice(0, 200) });
+				trace({ kind: "summary", call: summaryCalls, systemPrompt: initialSystem.slice(0, 200) });
 				if (summaryCalls <= SUMMARY_FAIL) {
 					throw new Error(`fake summary failure #${summaryCalls}`);
 				}
-				const text = `FAKE-SUMMARY[${(context.systemPrompt ?? "").slice(0, 60)}]\n## Goal\nScripted goal.\n## Next Steps\n1. Follow the note.`;
+				const text = `FAKE-SUMMARY[${initialSystem.slice(0, 60)}]\n## Goal\nScripted goal.\n## Next Steps\n1. Follow the note.`;
 				output.content.push({ type: "text", text: "" });
 				stream.push({ type: "text_start", contentIndex: 0, partial: output });
 				(output.content[0] as { text: string }).text = text;
@@ -246,7 +251,7 @@ function streamScripted(model: Model<any>, context: Context, options?: SimpleStr
 				}
 				const emitCall = (name: string, args: Record<string, unknown>) => {
 					const id = `call_${Date.now()}_${Math.floor(Math.random() * 1e6)}`;
-					const toolCall = { type: "toolCall" as const, id, name, arguments: args };
+					const toolCall = { type: "toolCall" as const, id, name, arguments: args as Record<string, never> };
 					output.content.push(toolCall);
 					stream.push({ type: "toolcall_start", contentIndex: index, partial: output });
 					stream.push({ type: "toolcall_delta", contentIndex: index, delta: JSON.stringify(args), partial: output });
